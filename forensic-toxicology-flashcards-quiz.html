@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forensic Toxicology — Case File</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0f151c;
+    --panel:#18212c;
+    --panel-2:#1f2b38;
+    --line:#2c3a49;
+    --paper:#f2ede0;
+    --paper-line:#d9cfb8;
+    --text:#e9e6df;
+    --muted:#8a97a5;
+    --amber:#e8a13a;
+    --amber-dim:#5a4322;
+    /* poison-class colours (real forensic taxonomy) */
+    --c-general:#8a97a5;
+    --c-corrosive:#d7d34a;
+    --c-irritant:#e07b39;
+    --c-neurotic:#a678e0;
+    --c-cardiac:#e2564e;
+    --c-asphyxiant:#46b6c9;
+    --c-agri:#7bc043;
+    --c-history:#b0895f;
+    --c-imageid:#e15a97;
+    --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #1b2836 0%, transparent 60%),
+      var(--ink);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:22px 18px 80px;}
+
+  /* ---- Header ---- */
+  header{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:linear-gradient(180deg,var(--panel) 0%, var(--panel-2) 100%);
+    padding:18px 20px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::before{
+    content:"POISON";
+    position:absolute;right:-8px;top:6px;
+    font-family:'Space Grotesk';font-weight:700;font-size:76px;
+    letter-spacing:6px;color:#ffffff;opacity:.03;
+    transform:rotate(0deg);pointer-events:none;
+  }
+  .eyebrow{
+    font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.22em;
+    color:var(--amber);text-transform:uppercase;margin:0 0 4px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);
+    box-shadow:0 0 0 3px var(--amber-dim);}
+  h1{
+    font-family:'Space Grotesk';font-weight:700;font-size:clamp(24px,5vw,34px);
+    margin:0;line-height:1.02;letter-spacing:-.01em;
+  }
+  h1 .sub{color:var(--muted);font-weight:500;font-size:.5em;display:block;
+    letter-spacing:.02em;margin-top:6px;font-family:'Inter';}
+  .filecode{
+    font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);
+    margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;
+    display:flex;flex-wrap:wrap;gap:6px 18px;
+  }
+  .filecode b{color:var(--text);font-weight:700;}
+
+  /* ---- Mode toggle ---- */
+  .modes{display:flex;gap:8px;margin:18px 0 14px;}
+  .mode-btn{
+    flex:1;background:var(--panel);border:1px solid var(--line);color:var(--muted);
+    font-family:'Space Grotesk';font-weight:600;font-size:14px;letter-spacing:.02em;
+    padding:12px 10px;border-radius:var(--radius);cursor:pointer;transition:.18s;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .mode-btn .k{font-family:'Space Mono';font-size:11px;opacity:.7;}
+  .mode-btn:hover{border-color:#3c4d5e;color:var(--text);}
+  .mode-btn.active{background:var(--amber);border-color:var(--amber);color:#1a1206;}
+  .mode-btn.active .k{opacity:.55;}
+
+  /* ---- Category filter ---- */
+  .filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+  .chip{
+    font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.04em;
+    background:var(--panel);border:1px solid var(--line);color:var(--muted);
+    padding:5px 10px;border-radius:20px;cursor:pointer;transition:.15s;
+    display:flex;align-items:center;gap:6px;text-transform:uppercase;
+  }
+  .chip .sw{width:9px;height:9px;border-radius:2px;}
+  .chip:hover{color:var(--text);border-color:#3c4d5e;}
+  .chip.on{color:#0f151c;font-weight:700;}
+  .chip.on[data-cat="all"]{background:var(--text);border-color:var(--text);}
+  .count{font-family:'Space Mono';font-size:11px;color:var(--muted);margin-left:auto;align-self:center;}
+
+  /* ================= FLASHCARDS ================= */
+  .stage{perspective:1600px;}
+  .card{
+    position:relative;width:100%;min-height:340px;
+    transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.7,.2,1);
+    cursor:pointer;
+  }
+  .card.flipped{transform:rotateY(180deg);}
+  .face{
+    position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    border-radius:6px;padding:22px 24px 54px;overflow:auto;
+    border:1px solid var(--paper-line);
+    background:
+      repeating-linear-gradient(180deg,transparent,transparent 31px,rgba(0,0,0,.035) 32px),
+      var(--paper);
+    color:#20262c;
+    box-shadow:0 14px 40px rgba(0,0,0,.45);
+  }
+  .face.back{transform:rotateY(180deg);}
+  .cat-stripe{
+    position:absolute;left:0;top:0;bottom:0;width:8px;border-radius:6px 0 0 6px;
+  }
+  .card-head{display:flex;justify-content:space-between;align-items:flex-start;
+    border-bottom:1.5px solid #cfc4ab;padding-bottom:8px;margin-bottom:14px;padding-left:6px;}
+  .card-code{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;color:#6b6553;}
+  .card-cat{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:3px 8px;border-radius:3px;color:#fff;}
+  .card-q{font-family:'Space Grotesk';font-weight:600;font-size:20px;line-height:1.3;
+    padding-left:6px;color:#1a1f24;}
+  .card-hint{font-family:'Space Mono';font-size:11px;color:#8a8064;margin-top:auto;
+    position:absolute;bottom:16px;left:30px;letter-spacing:.05em;}
+  .side-tag{position:absolute;bottom:14px;right:18px;font-family:'Space Mono';font-size:10px;
+    letter-spacing:.15em;color:#9a8f74;text-transform:uppercase;}
+  .a-body{padding-left:6px;font-size:15px;line-height:1.55;}
+  .a-body ul{margin:8px 0 0;padding-left:18px;}
+  .a-body li{margin-bottom:5px;}
+  .a-body b{color:#111;}
+  .a-body .key{background:#efe4c4;border-bottom:1.5px solid var(--amber);
+    padding:0 3px;border-radius:2px;font-weight:600;}
+  .a-lbl{font-family:'Space Mono';font-size:10px;letter-spacing:.14em;color:#8a8064;
+    text-transform:uppercase;margin:12px 0 3px;display:block;}
+
+  /* nav */
+  .nav{display:flex;align-items:center;gap:10px;margin-top:18px;}
+  .nav button{
+    background:var(--panel);border:1px solid var(--line);color:var(--text);
+    font-family:'Space Grotesk';font-weight:600;font-size:14px;padding:11px 16px;
+    border-radius:var(--radius);cursor:pointer;transition:.15s;
+  }
+  .nav button:hover{background:var(--panel-2);border-color:#3c4d5e;}
+  .nav button:disabled{opacity:.35;cursor:not-allowed;}
+  .nav .spacer{flex:1;}
+  .progress-txt{font-family:'Space Mono';font-size:12px;color:var(--muted);}
+  .bar{height:3px;background:var(--line);border-radius:3px;margin-top:12px;overflow:hidden;}
+  .bar span{display:block;height:100%;background:var(--amber);transition:width .3s;}
+
+  /* ================= QUIZ ================= */
+  .quiz-card{
+    border:1px solid var(--line);border-radius:6px;background:var(--panel);
+    padding:20px 22px;
+  }
+  .q-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;
+    font-family:'Space Mono';font-size:11px;color:var(--muted);letter-spacing:.05em;}
+  .q-cat{padding:3px 9px;border-radius:3px;color:#fff;font-weight:700;font-size:10px;
+    text-transform:uppercase;letter-spacing:.1em;}
+  .q-text{font-family:'Space Grotesk';font-weight:600;font-size:19px;line-height:1.35;margin-bottom:16px;}
+  .opts{display:flex;flex-direction:column;gap:9px;}
+  .opt{
+    text-align:left;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    font-family:'Inter';font-size:15px;padding:13px 15px;border-radius:var(--radius);
+    cursor:pointer;transition:.14s;display:flex;gap:11px;align-items:flex-start;line-height:1.35;
+  }
+  .opt .letter{font-family:'Space Mono';font-weight:700;color:var(--amber);flex-shrink:0;}
+  .opt:hover:not(:disabled){border-color:var(--amber);background:#25313f;}
+  .opt:disabled{cursor:default;}
+  .opt.correct{border-color:#4fbf6b;background:rgba(79,191,107,.14);}
+  .opt.correct .letter{color:#4fbf6b;}
+  .opt.wrong{border-color:var(--c-cardiac);background:rgba(226,86,78,.13);}
+  .opt.wrong .letter{color:var(--c-cardiac);}
+  .explain{
+    margin-top:15px;border-left:3px solid var(--amber);background:var(--panel-2);
+    padding:12px 15px;border-radius:0 var(--radius) var(--radius) 0;font-size:14px;line-height:1.55;
+    display:none;
+  }
+  .explain.show{display:block;}
+  .explain .lbl{font-family:'Space Mono';font-size:10px;letter-spacing:.14em;color:var(--amber);
+    text-transform:uppercase;display:block;margin-bottom:4px;}
+  .quiz-nav{display:flex;align-items:center;gap:10px;margin-top:16px;}
+  .quiz-nav .spacer{flex:1;}
+  .scorepill{font-family:'Space Mono';font-size:12px;color:var(--text);
+    background:var(--panel);border:1px solid var(--line);padding:7px 12px;border-radius:20px;}
+  .scorepill b{color:var(--amber);}
+
+  /* results */
+  .result{text-align:center;border:1px solid var(--line);border-radius:6px;
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));padding:36px 22px;}
+  .result .big{font-family:'Space Grotesk';font-weight:700;font-size:58px;color:var(--amber);
+    line-height:1;}
+  .result .verdict{font-family:'Space Grotesk';font-weight:600;font-size:20px;margin:10px 0 4px;}
+  .result .sub{color:var(--muted);font-size:14px;margin-bottom:20px;font-family:'Space Mono';}
+  .result button{background:var(--amber);border:none;color:#1a1206;font-family:'Space Grotesk';
+    font-weight:700;font-size:15px;padding:13px 26px;border-radius:var(--radius);cursor:pointer;}
+
+  .q-figure{margin:0 0 14px;display:none;}
+  .q-figure.show{display:block;}
+  .q-figure svg,.q-figure img,.fc-figure svg,.fc-figure img{width:100%;max-width:300px;height:auto;display:block;
+    border:1px solid var(--line);border-radius:6px;background:#f2ede0;object-fit:contain;}
+  .fc-figure{margin:4px 0 12px;display:none;}
+  .fc-figure.show{display:flex;justify-content:center;}
+  .fc-figure svg,.fc-figure img{max-width:230px;box-shadow:0 4px 14px rgba(0,0,0,.15);}
+  .hidden{display:none !important;}
+  footer{margin-top:26px;text-align:center;font-family:'Space Mono';font-size:11px;color:#54606d;
+    line-height:1.6;}
+
+  @media (max-width:560px){
+    .wrap{padding:16px 12px 70px;}
+    .card-q{font-size:18px;}
+    .q-text{font-size:17px;}
+    .mode-btn .k{display:none;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .card{transition:none;}
+    *{scroll-behavior:auto;}
+  }
+
+  .byline{margin:8px 0 0;font-size:12.5px;color:var(--muted,#9aa4b2);letter-spacing:.01em;}
+  .byline strong{color:var(--accent,#e0a95f);font-weight:600;}
+  .watermark{position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.10;
+    background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'300'%20height%3D'170'%3E%3Ctext%20x%3D'150'%20y%3D'90'%20text-anchor%3D'middle'%20font-family%3D'Inter%2CArial%2Csans-serif'%20font-size%3D'15'%20fill%3D'%23ffffff'%20transform%3D'rotate(-28%20150%2090)'%3EDr%20H.%20S.%20Chhabra%20%C2%B7%20HIMS%20%C2%B7%20SRHU%3C%2Ftext%3E%3C%2Fsvg%3E");background-size:300px 170px;background-repeat:repeat;}
+  @media print{.watermark{opacity:.12;}}
+
+  .license{max-width:900px;margin:26px auto 4px;padding:14px 18px;border:1px solid var(--line);border-radius:8px;
+    background:var(--panel,#161b22);display:flex;gap:14px;align-items:flex-start;font-size:12.5px;color:var(--muted,#9aa4b2);line-height:1.55;}
+  .license .cc-badge{flex:none;font-family:var(--mono,monospace);font-size:11px;letter-spacing:.05em;color:var(--accent,#e0a95f);
+    border:1px solid var(--accent,#e0a95f);border-radius:5px;padding:3px 7px;white-space:nowrap;}
+  .license a{color:var(--accent,#e0a95f);}
+  .license .disclaimer{display:block;margin-top:7px;font-size:11.5px;opacity:.82;font-style:italic;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow"><span class="dot"></span>Case File · Forensic Medicine &amp; Toxicology</p>
+    <h1>Toxicology Dossier
+      <span class="sub">Flashcards &amp; MCQ drill for MBBS &amp; PG · classical poison classification</span>
+    </h1>
+    <p class="byline">Created by <strong>Dr Harvinder Singh Chhabra</strong> &middot; Assistant Professor, Forensic Medicine, HIMS, SRHU, Dehradun</p>
+    <div class="filecode">
+      <span>REF: <b>TOX/FMT/2026</b></span>
+      <span>CARDS: <b id="fc-total">—</b></span>
+      <span>MCQ BANK: <b id="q-total">—</b></span>
+      <span>CLASSIFICATION: <b>Irritant · Neurotic · Corrosive · Cardiac · Asphyxiant · Agrochemical</b></span>
+    </div>
+  </header>
+
+  <div class="modes">
+    <button class="mode-btn active" id="m-cards" onclick="setMode('cards')">Flashcards <span class="k">[1]</span></button>
+    <button class="mode-btn" id="m-quiz" onclick="setMode('quiz')">MCQ Quiz <span class="k">[2]</span></button>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <!-- ============ FLASHCARD VIEW ============ -->
+  <section id="view-cards">
+    <div class="stage">
+      <div class="card" id="card" onclick="flip()" tabindex="0" role="button" aria-label="Flashcard, click or press space to flip">
+        <div class="face front">
+          <div class="cat-stripe" id="fc-stripe"></div>
+          <div class="card-head">
+            <span class="card-code" id="fc-code">TOX-000</span>
+            <span class="card-cat" id="fc-catlabel">CLASS</span>
+          </div>
+          <div class="fc-figure" id="fc-figure"></div>
+          <div class="card-q" id="fc-q">—</div>
+          <div class="card-hint">▸ tap / space to reveal findings</div>
+          <div class="side-tag">Specimen — Question</div>
+        </div>
+        <div class="face back">
+          <div class="cat-stripe" id="fc-stripe2"></div>
+          <div class="card-head">
+            <span class="card-code" id="fc-code2">TOX-000</span>
+            <span class="card-cat" id="fc-catlabel2">CLASS</span>
+          </div>
+          <div class="a-body" id="fc-a">—</div>
+          <div class="side-tag">Findings — Answer</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar"><span id="fc-bar" style="width:0%"></span></div>
+    <div class="nav">
+      <button id="fc-prev" onclick="prevCard()">← Prev</button>
+      <button onclick="flip()">Flip</button>
+      <button id="fc-next" onclick="nextCard()">Next →</button>
+      <span class="spacer"></span>
+      <button onclick="shuffleCards()" title="Shuffle deck">⤨ Shuffle</button>
+      <span class="progress-txt" id="fc-progress">0 / 0</span>
+    </div>
+  </section>
+
+  <!-- ============ QUIZ VIEW ============ -->
+  <section id="view-quiz" class="hidden">
+    <div id="quiz-live">
+      <div class="quiz-card">
+        <div class="q-meta">
+          <span id="q-index">Q 1</span>
+          <span class="q-cat" id="q-cat">CLASS</span>
+        </div>
+        <div class="q-figure" id="q-figure"></div>
+        <div class="q-text" id="q-text">—</div>
+        <div class="opts" id="q-opts"></div>
+        <div class="explain" id="q-explain"><span class="lbl">Rationale</span><span id="q-explain-txt"></span></div>
+      </div>
+      <div class="quiz-nav">
+        <span class="scorepill">Score <b id="q-score">0</b> / <span id="q-answered">0</span></span>
+        <span class="spacer"></span>
+        <button class="nav-btn" id="q-next" onclick="nextQuestion()"
+          style="background:var(--amber);border:1px solid var(--amber);color:#1a1206;font-family:'Space Grotesk';font-weight:700;padding:11px 20px;border-radius:4px;cursor:pointer;" disabled>Next →</button>
+      </div>
+      <div class="bar" style="margin-top:14px;"><span id="q-bar" style="width:0%"></span></div>
+    </div>
+
+    <div id="quiz-result" class="result hidden">
+      <div class="big" id="r-pct">0%</div>
+      <div class="verdict" id="r-verdict">—</div>
+      <div class="sub" id="r-detail">—</div>
+      <button onclick="restartQuiz()">↻ Retake drill</button>
+    </div>
+  </section>
+
+  <footer>
+    Study aid · verify fatal doses, antidotes &amp; PM findings against current standard texts (Reddy, Nandy, Parikh) and local protocol before clinical or medico-legal use.<br>
+    Keyboard: ← → navigate · Space flip · 1 / 2 switch mode
+  </footer>
+</div>
+
+<script>
+/* ============ DATA: FLASHCARDS ============ */
+const CATS = {
+  general:   {label:'General',     color:'var(--c-general)'},
+  corrosive: {label:'Corrosive',   color:'var(--c-corrosive)'},
+  irritant:  {label:'Irritant',    color:'var(--c-irritant)'},
+  neurotic:  {label:'Neurotic/CNS',color:'var(--c-neurotic)'},
+  cardiac:   {label:'Cardiac',     color:'var(--c-cardiac)'},
+  asphyxiant:{label:'Asphyxiant',  color:'var(--c-asphyxiant)'},
+  agri:      {label:'Agrochemical',color:'var(--c-agri)'},
+  history:   {label:'History',      color:'var(--c-history)'}
+};
+
+const CARDS = [
+  // ---------- GENERAL ----------
+  {c:'general', q:'Define poison. What are the classes of poisoning by rate of onset?',
+   a:`A <b>poison</b> is any substance that, when administered by any route in a suitable quantity, injures health or destroys life.
+   <span class="a-lbl">By course</span><ul>
+   <li><b>Fulminant</b> — massive dose, death before symptoms fully develop</li>
+   <li><b>Acute</b> — single large dose</li>
+   <li><b>Chronic</b> — repeated small (sub-lethal) doses over time</li>
+   <li><b>Subacute</b> — features of both</li></ul>`},
+
+  {c:'general', q:'What is a cumulative poison? Give examples.',
+   a:`A poison absorbed faster than it is excreted, so it <span class="key">accumulates</span> and produces chronic toxicity even at individually harmless doses.
+   <span class="a-lbl">Classic examples</span><ul>
+   <li>Arsenic, Lead, Mercury</li><li>Strychnine, Digitalis</li></ul>`},
+
+  {c:'general', q:'List the ideal properties of a homicidal poison.',
+   a:`<ul>
+   <li>Cheap and easily available</li>
+   <li>Colourless, odourless, tasteless</li>
+   <li>Highly toxic in small dose</li>
+   <li>Signs/symptoms resembling a natural disease</li>
+   <li>No characteristic post-mortem findings</li>
+   <li>Not readily detected by chemical analysis; rapidly destroyed in body</li></ul>
+   <span class="a-lbl">Nearest ideal</span> Arsenic, Thallium, Fluoride.`},
+
+  {c:'general', q:'Viscera preservation in suspected poisoning — what is preserved and in which preservative?',
+   a:`<span class="a-lbl">Viscera to preserve</span><ul>
+   <li>Stomach + entire contents</li>
+   <li>Upper part of small intestine (~30 cm) + contents</li>
+   <li>Liver (~500 g) &amp; one kidney (½)</li>
+   <li>Blood (10 mL) &amp; urine</li></ul>
+   <span class="a-lbl">Preservative</span> <span class="key">Saturated saline</span> (routine). Rectified spirit is an alternative <b>except</b> when alcohol, paraquat, phosphorus, or acetic/carbolic/formic acid is suspected. For <b>alcohol/volatiles</b> use <span class="key">sodium fluoride + potassium oxalate</span>. <b>Never formalin.</b>`},
+
+  {c:'general', q:'What are chelating agents? Match each with its metal.',
+   a:`Chelators bind metals into stable, excretable complexes.
+   <ul>
+   <li><b>BAL</b> (dimercaprol) — Arsenic, Mercury, Gold, Lead (with EDTA)</li>
+   <li><b>Ca-disodium EDTA</b> — Lead</li>
+   <li><b>Penicillamine</b> — Copper (Wilson's), Lead, Mercury</li>
+   <li><b>Desferrioxamine</b> — Iron</li>
+   <li><b>DMSA (succimer) / DMPS</b> — As, Pb, Hg (oral)</li>
+   <li><b>Prussian blue</b> — Thallium</li></ul>`},
+
+  // ---------- CORROSIVE ----------
+  {c:'corrosive', q:'Sulphuric acid poisoning — features and the term for its use as a weapon.',
+   a:`"Oil of vitriol." Strongest mineral acid; intensely corrosive and dehydrating.
+   <ul><li>Blackish/brown/charred burns; <b>grey-black</b> vomit</li>
+   <li>Severe pain, dysphagia, glottic oedema, shock</li>
+   <li>Late: pyloric/oesophageal stricture</li></ul>
+   <span class="a-lbl">Vitriolage</span> Throwing corrosive on a person (face) to disfigure — a form of criminal assault.
+   <span class="a-lbl">Treatment</span> Do <b>NOT</b> induce emesis or lavage; milk/water demulcents, no alkali (exothermic).`},
+
+  {c:'corrosive', q:'Which acid produces yellow staining, and by what reaction?',
+   a:`<span class="key">Nitric acid</span> — the <b>xanthoproteic reaction</b>: nitric acid + protein → <b>yellow</b> discolouration of skin/mucosa. Vomit and eschar are yellowish; gives off yellow (nitrous) fumes.`},
+
+  {c:'corrosive', q:'Carbolic acid (phenol) poisoning — key features, urine sign, and antidote note.',
+   a:`<ul><li>White eschar/corrosion with characteristic <b>phenolic (carbolic) odour</b></li>
+   <li><span class="key">Carboluria</span> — urine turns olive-green to smoky/dark on standing (oxidation)</li>
+   <li>CNS depression, coma; "carbolic marasmus" on chronic exposure</li></ul>
+   <span class="a-lbl">Note</span> No specific antidote; gastric lavage with warm water + activated charcoal; olive oil demulcent.`},
+
+  {c:'corrosive', q:'Oxalic acid poisoning — mechanism, sign and antidote.',
+   a:`An organic corrosive; also a systemic poison.
+   <ul><li>Binds serum calcium → <span class="key">hypocalcaemia</span> (tetany, cardiac) </li>
+   <li>Calcium oxalate crystals → <b>renal tubular damage</b> (oliguria)</li>
+   <li>"Sour" corrosive taste, white/grey eschar</li></ul>
+   <span class="a-lbl">Antidote</span> <b>Calcium</b> — calcium gluconate IV; calcium lactate / lime water / milk orally.`},
+
+  // ---------- IRRITANT: non-metallic ----------
+  {c:'irritant', q:'Phosphorus poisoning — the classic diagnostic triad of signs.',
+   a:`Yellow phosphorus (rat paste, fireworks).
+   <span class="a-lbl">Classic triad</span><ul>
+   <li><span class="key">Garlicky breath &amp; garlic-odour vomit</span></li>
+   <li><b>Luminous</b> vomit &amp; "<b>smoking stool</b>" (in dark)</li>
+   <li>Hepatotoxicity — <b>two-stage</b> course: GI phase → symptom-free interval → jaundice/hepatic failure</li></ul>
+   No specific antidote; historically copper sulphate lavage (forms insoluble copper phosphide).`},
+
+  // ---------- IRRITANT: metallic ----------
+  {c:'irritant', q:'Arsenic — contrast acute vs chronic features. Antidotes?',
+   a:`"King of poisons / poison of kings."
+   <span class="a-lbl">Acute</span> Garlicky vomit, <span class="key">rice-water stools</span>, intense thirst, GI + shock (mimics cholera/gastroenteritis).
+   <span class="a-lbl">Chronic</span> <b>Raindrop pigmentation</b>, hyperkeratosis, <b>Mees' lines</b> (transverse white nail bands), peripheral neuropathy, diarrhoea.
+   <span class="a-lbl">Antidote</span> BAL, or oral DMSA/DMPS.
+   <span class="a-lbl">Tests</span> Reinsch &amp; Marsh tests; deposits in hair &amp; nails (medico-legal for exhumation).`},
+
+  {c:'irritant', q:'Chronic lead poisoning (plumbism) — the classic signs and antidotes.',
+   a:`<ul>
+   <li><span class="key">Burtonian line</span> — blue-grey gum line</li>
+   <li><b>Basophilic stippling</b> of RBCs; anaemia</li>
+   <li><b>Wrist drop / foot drop</b> (motor neuropathy)</li>
+   <li>Lead colic (painter's colic); <b>lead encephalopathy</b> (esp. children)</li></ul>
+   <span class="a-lbl">Antidotes</span> Ca-disodium EDTA, DMSA, D-penicillamine; BAL added in encephalopathy.`},
+
+  {c:'irritant', q:'Mercury — acute vs chronic (name the syndromes) and the classic disease.',
+   a:`<span class="a-lbl">Acute (mercuric chloride)</span> Corrosive — metallic taste, grey oral burns, bloody diarrhoea, acute tubular necrosis.
+   <span class="a-lbl">Chronic</span> <span class="key">Erethism</span> (shyness, irritability, memory loss), <b>tremors</b> ("hatter's shakes"), stomatitis/salivation, <b>Pink disease (acrodynia)</b> in children.
+   <span class="a-lbl">Classic outbreak</span> <b>Minamata disease</b> (methylmercury, Japan).
+   <span class="a-lbl">Antidote</span> BAL, DMSA, penicillamine.`},
+
+  {c:'irritant', q:'Copper sulphate ("blue/nila thotha") poisoning — features and sign.',
+   a:`<ul><li><span class="key">Bluish-green vomit</span>, metallic taste, salivation</li>
+   <li>Haemolysis, methaemoglobinaemia, hepatic &amp; renal injury</li>
+   <li>Blue line on gums in chronic exposure</li></ul>
+   <span class="a-lbl">Treatment</span> Lavage; chelation with penicillamine/BAL/EDTA. Notoriously used for suicide in some regions.`},
+
+  {c:'irritant', q:'Match the metal to its specific antidote: Iron · Thallium.',
+   a:`<ul>
+   <li><b>Iron</b> → <span class="key">Desferrioxamine</span> (radio-opaque tablets on X-ray; 4 stages incl. deceptive latent phase)</li>
+   <li><b>Thallium</b> → <span class="key">Prussian blue</span> (also causes <b>alopecia</b> + painful peripheral neuropathy — "the poisoner's poison")</li></ul>`},
+
+  // ---------- IRRITANT: organic vegetable/animal ----------
+  {c:'irritant', q:'Abrus precatorius — common names, toxin and medico-legal use.',
+   a:`Jequirity / <b>rati / gunchi / crab's eye</b> (red seed with black spot).
+   <ul><li>Toxin: <span class="key">Abrin</span> (toxalbumin) — agglutinates RBCs</li>
+   <li>Seeds made into "<b>sui</b>" (needles) to kill <b>cattle</b> for hides — cattle poisoning</li>
+   <li>Local necrosis at puncture site</li></ul>`},
+
+  {c:'irritant', q:'Semecarpus anacardium (marking nut / bhilawa) — medico-legal importance.',
+   a:`The <b>marking nut</b>. Its black juice contains an irritant (semecarpol/bhilawanol).
+   <span class="a-lbl">Medico-legal</span> Applied to skin/vagina to <span class="key">fabricate bruises or false marks of assault/rape</span> — produces a vesicant dermatitis with irregular, non-anatomical margins that helps expose the fabrication.`},
+
+  {c:'irritant', q:'Snake venom — classify snakes by venom type with examples.',
+   a:`<span class="a-lbl">Colubrine — Neurotoxic</span> Cobra, Krait → ptosis, bulbar palsy, respiratory paralysis; little local reaction.
+   <span class="a-lbl">Viperine — Vasculotoxic</span> Russell's viper, Saw-scaled viper → local swelling/necrosis, bleeding, DIC, AKI.
+   Sea snakes → <b>myotoxic</b>.
+   <span class="a-lbl">Management</span> Immobilise, <b>polyvalent ASV</b>, <span class="key">20-min WBCT</span> to monitor coagulopathy; neostigmine + atropine for neurotoxic bites.`},
+
+  // ---------- NEUROTIC: CNS depressants ----------
+  {c:'neurotic', q:'Opium/morphine overdose — the classic triad and antidote.',
+   a:`<span class="a-lbl">Triad</span><ul>
+   <li><span class="key">Pinpoint pupils</span> (miosis)</li>
+   <li>Respiratory depression</li>
+   <li>Coma</li></ul>
+   Death from respiratory failure. <span class="a-lbl">Antidote</span> <b>Naloxone</b> (short-acting — repeat/infuse). Chase the "3 C's": Coma, pinpoint pupils, depressed respiration.`},
+
+  {c:'neurotic', q:'Which sedative has a specific antidote — and what is it? (Barbiturate vs Benzodiazepine)',
+   a:`<ul>
+   <li><b>Barbiturates</b> — CNS depression, "barbiturate blisters" over pressure points; <span class="key">no specific antidote</span> (supportive + alkaline diuresis for phenobarbital)</li>
+   <li><b>Benzodiazepines</b> — antidote <span class="key">Flumazenil</span> (use with caution — may precipitate seizures)</li></ul>`},
+
+  {c:'neurotic', q:'Ethyl alcohol — medico-legal blood levels you must know.',
+   a:`<ul>
+   <li><b>Legal driving limit (India)</b>: <span class="key">30 mg / 100 mL</span> blood</li>
+   <li>~150 mg% — clumsy, clinical intoxication</li>
+   <li>~300 mg% — stupor</li>
+   <li>&gt; <b>400–500 mg%</b> — coma / fatal range</li></ul>
+   Preserve blood in <b>sodium fluoride + potassium oxalate</b> (prevents post-mortem alcohol formation). Widmark formula estimates concentration.`},
+
+  {c:'neurotic', q:'Methyl alcohol poisoning — mechanism, hallmark sign, and antidote.',
+   a:`Metabolised (via alcohol dehydrogenase) to <b>formaldehyde → formic acid</b>.
+   <ul><li><span class="key">Blindness</span> from optic atrophy; severe <b>high anion-gap metabolic acidosis</b></li>
+   <li>Latent period then headache, vertigo, visual blurring</li></ul>
+   <span class="a-lbl">Antidote</span> <b>Fomepizole</b> or <b>ethanol</b> (competes for ADH) + <b>folinic acid</b>; correct acidosis, haemodialysis.`},
+
+  // ---------- NEUROTIC: deliriant ----------
+  {c:'neurotic', q:'Datura poisoning — alkaloids, the mnemonic, medico-legal names, antidote.',
+   a:`Alkaloids: <span class="key">atropine, hyoscine (scopolamine), hyoscyamine</span> (anticholinergic).
+   <span class="a-lbl">Mnemonic</span> "Hot as a hare, blind as a bat, dry as a bone, red as a beet, mad as a hatter."
+   <span class="a-lbl">Medico-legal</span> "<b>Road-side / railway poison</b>," stupefying agent for robbery; also aphrodisiac abuse.
+   <span class="a-lbl">Antidote</span> <b>Physostigmine</b>.`},
+
+  {c:'neurotic', q:'Cannabis (bhang/ganja/charas) — key medico-legal association.',
+   a:`Active principle: <b>THC</b> (Δ-9-tetrahydrocannabinol).
+   <ul><li>Euphoria, altered perception, red eyes, dry mouth, tachycardia</li>
+   <li><span class="key">"Running amok"</span> — sudden homicidal outburst historically linked to cannabis intoxication</li></ul>
+   Regulated under the NDPS Act.`},
+
+  {c:'neurotic', q:'Strychnine (nux vomica / kuchila) — hallmark features and how to differentiate from tetanus.',
+   a:`Blocks spinal inhibitory (glycine) neurons → unopposed reflex excitation.
+   <ul><li><span class="key">Convulsions with consciousness retained</span></li>
+   <li>Opisthotonos, <b>risus sardonicus</b>, stimulus-triggered spasms with relaxation in between</li></ul>
+   <span class="a-lbl">vs Tetanus</span> Strychnine: rapid onset (minutes), <b>trismus is late</b>, full relaxation between fits. Tetanus: gradual, <b>trismus is early</b>, muscles stay rigid between spasms.
+   Used as vermin/cattle poison.`},
+
+  // ---------- CARDIAC ----------
+  {c:'cardiac', q:'Aconite (bish / monkshood) — hallmark symptom and its reputation.',
+   a:`"<span class="key">Queen of poisons</span>" — one of the most toxic Indian plants (alkaloid <b>aconitine</b>).
+   <ul><li><b>Tingling &amp; numbness</b> of tongue, mouth then whole body — early hallmark</li>
+   <li>Arrhythmias, hypotension, bradycardia → cardiac death</li>
+   <li>Root mistaken for horseradish; used as arrow/homicidal poison</li></ul>`},
+
+  {c:'cardiac', q:'Oleander poisoning — the two plants and mechanism.',
+   a:`Contain <b>cardiac glycosides</b> (digitalis-like).
+   <ul><li><span class="key">Yellow oleander</span> — <i>Cerbera thevetia</i> (seeds "lucky nut") — common suicidal poison in S. India / Sri Lanka</li>
+   <li><b>White/common oleander</b> — <i>Nerium indicum/oleander</i></li></ul>
+   Vomiting, hyperkalaemia, brady-arrhythmias, heart block. Management: atropine, correct K⁺, digoxin-specific Fab.`},
+
+  {c:'cardiac', q:'Nicotine / tobacco poisoning — mechanism and features.',
+   a:`Biphasic action at nicotinic receptors — <b>stimulation then blockade</b>.
+   <ul><li>Nausea, salivation, tremor, tachy→brady-cardia</li>
+   <li>Fasciculations → paralysis; convulsions; respiratory failure</li></ul>
+   "Green tobacco sickness" in harvesters (dermal absorption).`},
+
+  // ---------- ASPHYXIANT ----------
+  {c:'asphyxiant', q:'Carbon monoxide poisoning — mechanism, the classic sign, antidote.',
+   a:`CO binds Hb with ~<span class="key">200–250× the affinity of O₂</span> → carboxyhaemoglobin → tissue hypoxia.
+   <ul><li><b>Cherry-red</b> post-mortem lividity, skin, mucosa &amp; blood</li>
+   <li>Headache, dizziness, confusion, coma; delayed neuropsychiatric sequelae</li></ul>
+   <span class="a-lbl">Antidote</span> <b>100% O₂</b> (↓ CO half-life); hyperbaric O₂ in severe cases.`},
+
+  {c:'asphyxiant', q:'Identify these gases by their odour / source: H₂S · CO₂.',
+   a:`<ul>
+   <li><b>Hydrogen sulphide (H₂S)</b> — "<span class="key">rotten-egg</span>" smell, <b>sewer/manhole gas</b>; paralyses smell &amp; respiration ("knock-down"); a cellular asphyxiant (inhibits cytochrome oxidase)</li>
+   <li><b>Carbon dioxide (CO₂)</b> — odourless "black damp/choke damp"; simple asphyxiant in wells, silos, mines</li></ul>`},
+
+  // ---------- AGROCHEMICAL ----------
+  {c:'agri', q:'Organophosphate poisoning — mechanism, features and antidotes.',
+   a:`Irreversibly inhibit <b>acetylcholinesterase</b> → ACh excess.
+   <span class="a-lbl">Muscarinic (DUMBELS)</span> Diarrhoea, Urination, Miosis, Bradycardia/Bronchorrhoea, Emesis, Lacrimation, Salivation.
+   <span class="a-lbl">Nicotinic</span> Fasciculations, weakness, paralysis. Plus CNS depression &amp; <b>garlic odour</b>.
+   <span class="a-lbl">Antidotes</span> <span class="key">Atropine</span> (blocks muscarinic — titrate to dry chest) + <span class="key">Pralidoxime / 2-PAM</span> (reactivates enzyme, give early). Watch for <b>Intermediate Syndrome</b> (24–96 h) &amp; OPIDN (delayed neuropathy).`},
+
+  {c:'agri', q:'How does carbamate poisoning differ from organophosphate?',
+   a:`Both inhibit cholinesterase, but carbamate binding is <span class="key">reversible &amp; spontaneously hydrolyses</span>.
+   <ul><li>Shorter duration, generally milder, less CNS penetration</li>
+   <li><b>Atropine</b> is mainstay; <b>oximes (2-PAM) usually not required</b> and traditionally avoided in pure carbamate poisoning</li></ul>`},
+
+  {c:'agri', q:'Aluminium phosphide (Celphos / "rice tablet") — why so feared, breath sign, test, treatment.',
+   a:`Releases <span class="key">phosphine (PH₃) gas</span> on contact with moisture/acid → cellular poison (cytochrome oxidase, oxidative stress).
+   <ul><li><b>Garlic/decaying-fish breath</b>; <b>refractory hypotension &amp; shock</b>, metabolic acidosis, arrhythmias</li>
+   <li>Extremely high fatality; <span class="key">no antidote</span></li></ul>
+   <span class="a-lbl">Test</span> Silver nitrate paper test (PH₃ blackens AgNO₃-impregnated paper) on breath/gastric aspirate.
+   <span class="a-lbl">Rx</span> KMnO₄/coconut-oil lavage, aggressive supportive care, MgSO₄.`},
+
+  {c:'agri', q:'Paraquat poisoning — the lethal hallmark and a critical treatment caveat.',
+   a:`A bipyridyl herbicide; generates free radicals.
+   <ul><li><span class="key">Progressive pulmonary fibrosis</span> → delayed respiratory failure (death may take days)</li>
+   <li>Corrosive oral ulceration, hepatorenal failure</li></ul>
+   <span class="a-lbl">Caveat</span> <b>Supplemental oxygen is CONTRA-indicated</b> (worsens free-radical lung injury) unless SpO₂ critically low. Fuller's earth/activated charcoal to bind; early haemoperfusion.`},
+
+  {c:'agri', q:'Organochlorines (DDT, endrin, endosulfan) — how do they present?',
+   a:`Unlike OP/carbamate, these are <span class="key">CNS stimulants</span>.
+   <ul><li>Hyperexcitability, tremor, myoclonus, <b>convulsions</b></li>
+   <li>Highly lipophilic &amp; persistent (bio-accumulate; many banned)</li></ul>
+   No specific antidote — control seizures (benzodiazepines), decontaminate; avoid adrenaline (arrhythmia risk).`},
+  {"c":"history","q":"Who is regarded as the \"Father of Toxicology\"?","a":"<span class=\"key\">Mathieu Orfila</span> (1787–1853), Spanish-born, worked in Paris. His <i>Traité des poisons</i> (1813) established toxicology as a scientific discipline; his testimony in the <b>Lafarge arsenic trial</b> (1840) is a landmark of forensic toxicology."},
+  {"c":"history","q":"Which physician coined the dose–response principle, and how is it phrased?","a":"<span class=\"key\">Paracelsus</span> (16th c.): \"<i>All things are poison and nothing is without poison; the dose alone makes a thing not a poison.</i>\" — the foundation of toxicology."},
+  {"c":"history","q":"What does the Marsh test detect, and who devised it?","a":"<span class=\"key\">Arsenic</span>. Devised by <b>James Marsh</b> (1836) — a sensitive test giving a metallic \"arsenic mirror\". First widely used chemical test in a criminal trial."},
+  {"c":"history","q":"What is the earliest known text on forensic medicine?","a":"<span class=\"key\">\"Xi Yuan Ji Lu\"</span> (\"The Washing Away of Wrongs\") by <b>Song Ci</b>, China, 1247 — the first systematic forensic/medico-legal text."},
+  {"c":"history","q":"The Calabar bean was used in African \"trial by ordeal\". What is its active principle?","a":"<b>Physostigma venenosum</b> (esere/ordeal bean) → <span class=\"key\">physostigmine</span>, a cholinesterase inhibitor (later the antidote for anticholinergic poisoning)."},
+  {"c":"history","q":"What was \"Aqua Tofana\"?","a":"A 17th-century <span class=\"key\">arsenic-based</span> poison (Giulia Tofana, Italy) sold to would-be widows — colourless, tasteless; arsenic's reputation as \"inheritance powder\"."},
+  {"c":"history","q":"From which Greek word is \"toxicology\" derived?","a":"<span class=\"key\">toxikon</span> — \"arrow poison\" (from <i>toxon</i>, a bow), reflecting early use of poisoned arrows."},
+  {"c":"history","q":"Name the standard Indian textbook of forensic medicine & toxicology begun in the early 20th century.","a":"<b>Modi's Medical Jurisprudence and Toxicology</b> (Jaising P. Modi, first published 1920) — a foundational Indian reference."}
+];
+
+/* ============ DATA: QUIZ ============ */
+const QUIZ = [
+  {c:'general', q:'The preservative of choice for viscera in a routine suspected-poisoning autopsy is:',
+   o:['Formal saline','Saturated solution of common salt','10% formalin','Absolute alcohol'],
+   ans:1, e:'Saturated saline (common salt) is routine. Formalin is never used as it interferes with analysis. Sodium fluoride is used specifically when alcohol is suspected.'},
+
+  {c:'general', q:'For suspected alcohol poisoning, blood should be preserved with:',
+   o:['Rectified spirit','Saturated saline','Sodium fluoride with potassium oxalate','Formalin'],
+   ans:2, e:'Sodium fluoride inhibits microbial fermentation that could raise post-mortem alcohol, and potassium oxalate is the anticoagulant. Spirit/saline are inappropriate for alcohol estimation.'},
+
+  {c:'corrosive', q:'Xanthoproteic (yellow) staining of tissues is characteristic of poisoning by:',
+   o:['Sulphuric acid','Hydrochloric acid','Nitric acid','Oxalic acid'],
+   ans:2, e:'Nitric acid reacts with proteins to give a yellow (xanthoproteic) reaction, staining skin and mucosa yellow.'},
+
+  {c:'corrosive', q:'The specific antidote for oxalic acid poisoning is:',
+   o:['Sodium bicarbonate','Calcium gluconate','BAL','Atropine'],
+   ans:1, e:'Oxalic acid chelates calcium causing hypocalcaemia; calcium (gluconate IV, lactate/lime water orally) is the antidote.'},
+
+  {c:'corrosive', q:'Carboluria (urine darkening on standing) is seen in poisoning with:',
+   o:['Phenol (carbolic acid)','Oxalic acid','Nitric acid','Formic acid'],
+   ans:0, e:'Phenol metabolites oxidise on standing, turning the urine olive-green to smoky/dark — "carboluria."'},
+
+  {c:'irritant', q:'"Rice-water stools" in acute poisoning classically point to:',
+   o:['Lead','Arsenic','Mercury','Copper'],
+   ans:1, e:'Acute arsenic poisoning mimics cholera with profuse rice-water stools, vomiting and intense thirst.'},
+
+  {c:'irritant', q:'Mees\u2019 lines (transverse white bands on nails) are a feature of chronic poisoning by:',
+   o:['Thallium','Arsenic','Lead','Iron'],
+   ans:1, e:'Mees\u2019 lines, raindrop pigmentation and peripheral neuropathy characterise chronic arsenicosis.'},
+
+  {c:'irritant', q:'The Burtonian line on the gums indicates poisoning by:',
+   o:['Mercury','Arsenic','Lead','Copper'],
+   ans:2, e:'The blue-grey Burtonian line is a classic sign of chronic lead poisoning (plumbism), along with basophilic stippling and wrist drop.'},
+
+  {c:'irritant', q:'Erethism, hatter\u2019s tremor and acrodynia are features of chronic poisoning with:',
+   o:['Mercury','Thallium','Lead','Manganese'],
+   ans:0, e:'These, along with stomatitis, are hallmark chronic mercury features. Minamata disease is the classic methylmercury outbreak.'},
+
+  {c:'irritant', q:'The specific antidote for iron poisoning is:',
+   o:['Penicillamine','Desferrioxamine','Prussian blue','Ca-EDTA'],
+   ans:1, e:'Desferrioxamine chelates iron. Iron tablets are radio-opaque and poisoning follows a characteristic 4-stage course with a deceptive latent phase.'},
+
+  {c:'irritant', q:'Alopecia with painful peripheral neuropathy, treated with Prussian blue, suggests:',
+   o:['Thallium','Arsenic','Mercury','Lead'],
+   ans:0, e:'Thallium classically causes alopecia and painful neuropathy; Prussian blue is the specific antidote.'},
+
+  {c:'irritant', q:'Abrus precatorius seeds are made into "sui" (needles) chiefly to poison:',
+   o:['Humans by ingestion','Cattle for their hides','Fish in ponds','Crops'],
+   ans:1, e:'The abrin-containing seeds are fashioned into needles ("sui") to kill cattle — a classic cattle-poisoning method.'},
+
+  {c:'irritant', q:'The marking nut (Semecarpus / bhilawa) is medico-legally important because it is used to:',
+   o:['Cause abortion','Fabricate bruises / false marks of assault','Stupefy for robbery','Poison wells'],
+   ans:1, e:'Its irritant juice raises vesicant lesions with irregular non-anatomical margins, used to fabricate marks of assault or rape.'},
+
+  {c:'irritant', q:'A neurotoxic (colubrine) snakebite is typically caused by:',
+   o:['Russell\u2019s viper','Saw-scaled viper','Cobra / krait','Pit viper'],
+   ans:2, e:'Cobra and krait (Elapidae/colubrine) are neurotoxic causing ptosis and respiratory paralysis; vipers are vasculotoxic.'},
+
+  {c:'neurotic', q:'The classic triad of acute opioid overdose is:',
+   o:['Mydriasis, hypertension, seizures','Pinpoint pupils, respiratory depression, coma','Dry skin, delirium, tachycardia','Salivation, miosis, bradycardia'],
+   ans:1, e:'Miosis (pinpoint pupils), respiratory depression and coma define opioid overdose. Antidote: naloxone.'},
+
+  {c:'neurotic', q:'Flumazenil is the specific antidote for overdose of:',
+   o:['Barbiturates','Benzodiazepines','Opioids','Tricyclic antidepressants'],
+   ans:1, e:'Flumazenil reverses benzodiazepines (used cautiously). Barbiturates have no specific antidote.'},
+
+  {c:'neurotic', q:'Blindness in methanol poisoning is due to its metabolite:',
+   o:['Formic acid','Oxalic acid','Acetone','Lactic acid'],
+   ans:0, e:'Methanol → formaldehyde → formic acid, which causes optic atrophy/blindness and severe metabolic acidosis. Antidote: fomepizole/ethanol + folinic acid.'},
+
+  {c:'neurotic', q:'The legal blood-alcohol limit for driving in India is:',
+   o:['30 mg/100 mL','80 mg/100 mL','50 mg/100 mL','100 mg/100 mL'],
+   ans:0, e:'India\u2019s statutory limit is 30 mg per 100 mL of blood.'},
+
+  {c:'neurotic', q:'Physostigmine is the antidote for poisoning by:',
+   o:['Organophosphate','Datura (atropine group)','Strychnine','Opium'],
+   ans:1, e:'Datura (atropine, hyoscine, hyoscyamine) is anticholinergic; physostigmine, a cholinesterase inhibitor, reverses it.'},
+
+  {c:'neurotic', q:'"Road-side" or "railway" poison used to stupefy victims for robbery is:',
+   o:['Cannabis','Datura','Cocaine','Chloroform'],
+   ans:1, e:'Datura is the classic stupefying "railway/road-side poison" mixed into food/drink by robbers.'},
+
+  {c:'neurotic', q:'In strychnine poisoning, a distinguishing feature from tetanus is:',
+   o:['Early trismus','Rigidity persists between spasms','Consciousness is lost early','Full relaxation between convulsions'],
+   ans:3, e:'Strychnine causes stimulus-triggered convulsions with complete relaxation between fits and late trismus; tetanus has early trismus and persistent rigidity.'},
+
+  {c:'cardiac', q:'Early tingling and numbness of the tongue and mouth is the hallmark of:',
+   o:['Oleander','Aconite','Nicotine','Digitalis'],
+   ans:1, e:'Aconite ("queen of poisons") causes early tingling/numbness spreading over the body, then fatal arrhythmia.'},
+
+  {c:'cardiac', q:'Yellow oleander (Cerbera thevetia) exerts toxicity mainly through:',
+   o:['Anticholinergic alkaloids','Cardiac glycosides','Cyanogenic glycosides','Cholinesterase inhibition'],
+   ans:1, e:'Oleanders contain digitalis-like cardiac glycosides causing hyperkalaemia and brady-arrhythmias; common suicidal poison in South Asia.'},
+
+  {c:'asphyxiant', q:'Cherry-red post-mortem lividity is characteristic of poisoning by:',
+   o:['Hydrogen sulphide','Cyanide only','Carbon monoxide','Carbon dioxide'],
+   ans:2, e:'Carboxyhaemoglobin gives cherry-red lividity in CO poisoning (cyanide can also give a pinkish hue, but the classic answer here is CO).'},
+
+  {c:'asphyxiant', q:'A "rotten-egg" smelling gas encountered in sewers/manholes is:',
+   o:['Carbon dioxide','Hydrogen sulphide','Carbon monoxide','Methane'],
+   ans:1, e:'H₂S has a rotten-egg odour, rapidly paralyses smell and respiration ("knock-down"), and inhibits cytochrome oxidase.'},
+
+  {c:'asphyxiant', q:'The antidote/mainstay for carbon monoxide poisoning is:',
+   o:['Methylene blue','100% oxygen','Sodium thiosulphate','Amyl nitrite'],
+   ans:1, e:'High-flow 100% O₂ (hyperbaric in severe cases) displaces CO from haemoglobin and shortens its half-life.'},
+
+  {c:'agri', q:'The antidotes for organophosphate poisoning are:',
+   o:['Atropine + pralidoxime','Naloxone + flumazenil','BAL + EDTA','Physostigmine + folinic acid'],
+   ans:0, e:'Atropine counters muscarinic effects; pralidoxime (2-PAM) reactivates cholinesterase and must be given early.'},
+
+  {c:'agri', q:'The muscarinic effects of organophosphate poisoning are remembered by:',
+   o:['SLUDGE / DUMBELS','MUDPILES','ABCDE','VITAMINS'],
+   ans:0, e:'DUMBELS/SLUDGE: Diarrhoea, Urination, Miosis, Bradycardia/Bronchorrhoea, Emesis, Lacrimation, Salivation.'},
+
+  {c:'agri', q:'Compared with organophosphates, carbamate poisoning is:',
+   o:['Irreversible and longer-lasting','Reversible; oximes usually not needed','Untreatable','Only dermal'],
+   ans:1, e:'Carbamate–cholinesterase binding is reversible and self-hydrolysing; atropine is mainstay and oximes are usually unnecessary.'},
+
+  {c:'agri', q:'Aluminium phosphide (Celphos) kills mainly by liberating:',
+   o:['Cyanide','Phosphine gas','Chlorine','Carbon monoxide'],
+   ans:1, e:'On contact with moisture it releases phosphine, a cellular poison causing refractory shock and acidosis; there is no antidote.'},
+
+  {c:'agri', q:'In paraquat poisoning, which intervention is generally CONTRA-indicated?',
+   o:['Activated charcoal / Fuller\u2019s earth','Supplemental oxygen','Haemoperfusion','IV fluids'],
+   ans:1, e:'Oxygen promotes free-radical formation and worsens the progressive pulmonary fibrosis; it is avoided unless SpO₂ is critically low.'},
+
+  {c:'agri', q:'Unlike organophosphates, organochlorines (e.g., endrin, DDT) typically cause:',
+   o:['CNS depression and miosis','CNS stimulation and convulsions','Bradycardia and salivation','Refractory hypotension'],
+   ans:1, e:'Organochlorines are CNS stimulants producing tremor, myoclonus and convulsions; treatment is largely supportive with seizure control.'},
+  {"c":"history","q":"The \"Father of Toxicology\" is:","o":["Mathieu Orfila","Paracelsus","James Marsh","Bernard Spilsbury"],"ans":0,"e":"Orfila established toxicology as a science with his Traité des poisons (1813)."},
+  {"c":"history","q":"\"The dose makes the poison\" is attributed to:","o":["Paracelsus","Galen","Orfila","Hippocrates"],"ans":0,"e":"Paracelsus articulated the dose-response principle in the 16th century."},
+  {"c":"history","q":"The Marsh test (1836) is used to detect:","o":["Arsenic","Lead","Cyanide","Strychnine"],"ans":0,"e":"James Marsh developed a sensitive test producing an arsenic \"mirror\"."},
+  {"c":"history","q":"The Reinsch test detects several heavy metals, classically:","o":["Arsenic and mercury","Lead only","Iron","Thallium"],"ans":0,"e":"Reinsch test detects As, Hg, Sb, Bi by deposition on a copper strip."},
+  {"c":"history","q":"The first systematic forensic-medicine text, \"The Washing Away of Wrongs\", was written by:","o":["Song Ci","Confucius","Avicenna","Galen"],"ans":0,"e":"Song Ci (China, 1247) authored Xi Yuan Ji Lu, the earliest forensic text."},
+  {"c":"history","q":"Orfila’s landmark courtroom testimony concerned poisoning by:","o":["Arsenic (Lafarge trial)","Strychnine","Cyanide","Aconite"],"ans":0,"e":"The 1840 Lafarge trial cemented forensic toxicology’s role in court."},
+  {"c":"history","q":"\"Toxicology\" derives from the Greek toxikon, meaning:","o":["Arrow poison","Bitter root","Snake venom","Deadly herb"],"ans":0,"e":"Toxikon referred to poison smeared on arrows."},
+  {"c":"history","q":"The active principle of the Calabar (\"ordeal\") bean is:","o":["Physostigmine","Strychnine","Coniine","Atropine"],"ans":0,"e":"Physostigma venenosum yields physostigmine, used in West African trials by ordeal."},
+  {"c":"history","q":"Socrates was executed with a decoction of:","o":["Hemlock","Nightshade","Foxglove","Aconite"],"ans":0,"e":"Hemlock (Conium maculatum) contains coniine, causing ascending paralysis."},
+  {"c":"history","q":"\"Aqua Tofana\", a notorious historical poison, was based on:","o":["Arsenic","Cyanide","Antimony","Thallium"],"ans":0,"e":"An arsenic preparation sold in 17th-century Italy for covert poisoning."},
+  {"c":"history","q":"\"Mithridatism\" refers to:","o":["Acquiring tolerance by small repeated poison doses","Sudden fatal poisoning","A universal antidote","A test for arsenic"],"ans":0,"e":"Named after King Mithridates, who self-dosed to build immunity."},
+  {"c":"history","q":"The dimercaprol antidote BAL (\"British Anti-Lewisite\") was developed in WWII against:","o":["Lewisite (arsenical war gas)","Mustard gas","Phosgene","Chlorine"],"ans":0,"e":"BAL was created to counter the arsenical vesicant lewisite; now chelates As/Hg/Pb."},
+  {"c":"history","q":"The Widmark formula is used to estimate:","o":["Blood alcohol concentration","Arsenic in hair","Time since death","CO saturation"],"ans":0,"e":"Widmark relates dose, body water and time to blood alcohol level."},
+  {"c":"history","q":"Arsenic was historically nicknamed:","o":["\"Inheritance powder\"","\"King’s cure\"","\"Green death\"","\"Sleeping salt\""],"ans":0,"e":"Its covert use to hasten inheritances earned this name."},
+  {"c":"history","q":"The standard Indian textbook \"Medical Jurisprudence and Toxicology\" was authored by:","o":["J. P. Modi","K. S. Narayan Reddy","Apurba Nandy","C. K. Parikh"],"ans":0,"e":"Modi’s text (first published 1920) is a foundational Indian reference."},
+  {"c":"history","q":"The Gutzeit test, like the Marsh and Reinsch tests, screens for:","o":["Arsenic","Lead","Mercury only","Cyanide"],"ans":0,"e":"Gutzeit is a classical qualitative screen for arsenic."},
+  {"c":"history","q":"Cleopatra is traditionally said to have died from the venom of:","o":["An asp (snake)","A scorpion","Hemlock","Aconite"],"ans":0,"e":"Legend attributes her death to an asp bite (elapid venom)."},
+  {"c":"history","q":"The modern reference method for quantifying metallic poisons such as arsenic is:","o":["Atomic absorption spectrophotometry","Marsh test","Reinsch test","Paper chromatography"],"ans":0,"e":"AAS (and ICP-MS) have largely replaced classical wet tests."},
+  {"c":"history","q":"\"Theriac\"/\"Mithridatium\" in antiquity referred to:","o":["A supposed universal antidote","A poisoned wine","An arrow poison","A trial by ordeal"],"ans":0,"e":"Complex multi-ingredient preparations believed to counter all poisons."},
+  {"c":"history","q":"Sir Bernard Spilsbury is historically famous as an early:","o":["Forensic pathologist","Toxicologist chemist","Botanist","Chemist who found arsenic"],"ans":0,"e":"Spilsbury popularised forensic pathology in early 20th-century England."},
+  {"c":"general","q":"The classification of poisons into corrosives, irritants and neurotics is based on:","o":["Mode of action / symptoms produced","Chemical structure","Physical state","Legal schedule"],"ans":0,"e":"It is a symptomatic/action-based classification."},
+  {"c":"general","q":"The commonest agent of suicidal poisoning in rural India is:","o":["Pesticides (OP / aluminium phosphide)","Arsenic","Opium","Corrosives"],"ans":0,"e":"Agricultural poisons dominate rural suicidal poisoning."},
+  {"c":"general","q":"\"Corpus delicti\" in a poisoning case refers to:","o":["The body/essential facts proving the crime","The stomach contents","The chemical report","The autopsy surgeon"],"ans":0,"e":"Literally \"body of the crime\" — the facts establishing that a crime occurred."},
+  {"c":"general","q":"Idiosyncrasy means:","o":["An abnormal individual reaction to a usual dose","Cumulative toxicity","Tolerance","Synergism"],"ans":0,"e":"A genetically-determined abnormal response to an ordinary dose."},
+  {"c":"general","q":"Alcohol taken with barbiturates illustrates:","o":["Synergism","Antagonism","Idiosyncrasy","Tolerance"],"ans":0,"e":"Their combined CNS depression exceeds the sum — synergism."},
+  {"c":"general","q":"Activated charcoal is LEAST effective for:","o":["Iron and lithium","Aspirin","Theophylline","Carbamazepine"],"ans":0,"e":"Metals/ions (iron, lithium), alcohols and hydrocarbons adsorb poorly."},
+  {"c":"general","q":"Gastric lavage is contraindicated in poisoning by:","o":["Corrosives and hydrocarbons","Opioids","Barbiturates","Arsenic"],"ans":0,"e":"Risk of perforation (corrosives) and aspiration pneumonitis (hydrocarbons)."},
+  {"c":"general","q":"BAL (dimercaprol) is contraindicated / harmful in poisoning by:","o":["Iron, cadmium, selenium","Arsenic","Mercury","Lead"],"ans":0,"e":"BAL forms more toxic complexes with iron, cadmium and selenium."},
+  {"c":"general","q":"For a suspected inhalational (gaseous) poison, the key sample to preserve is:","o":["Blood (and lung)","Stomach contents","Bile","Vitreous only"],"ans":0,"e":"Blood (e.g., for carboxyhaemoglobin) plus lung tissue."},
+  {"c":"general","q":"\"Fatal period\" is defined as:","o":["Time between taking the poison and death","The lethal dose","Time to symptom onset","Time to excretion"],"ans":0,"e":"The interval from ingestion to death."},
+  {"c":"general","q":"Which is nearest to an \"ideal\" homicidal poison?","o":["Arsenic","Strychnine","Phenol","Sulphuric acid"],"ans":0,"e":"Arsenic is tasteless, mimics gastroenteritis and was long hard to detect."},
+  {"c":"general","q":"Forced alkaline diuresis is useful in poisoning by:","o":["Salicylates and phenobarbital","Amphetamine","Quinine","Strychnine"],"ans":0,"e":"Urinary alkalinisation enhances excretion of weak acids like aspirin/phenobarbital."},
+  {"c":"corrosive","q":"Alkalis characteristically produce which type of tissue necrosis?","o":["Liquefactive","Coagulative","Caseous","Fat"],"ans":0,"e":"Alkalis cause deep, penetrating liquefactive necrosis; acids cause coagulative."},
+  {"c":"corrosive","q":"Which acid, though weak, causes dangerous hypocalcaemia and needs calcium gluconate gel on skin burns?","o":["Hydrofluoric acid","Sulphuric acid","Nitric acid","Acetic acid"],"ans":0,"e":"HF penetrates skin and binds calcium/magnesium, causing severe hypocalcaemia."},
+  {"c":"corrosive","q":"Calcium oxalate crystals from oxalic acid poisoning are classically described as:","o":["Envelope / dumb-bell shaped","Needle-shaped only","Hexagonal","Coffin-lid"],"ans":0,"e":"Envelope-shaped (and dumb-bell) crystals appear in urine/tissues."},
+  {"c":"corrosive","q":"The strongest and most dehydrating mineral acid is:","o":["Sulphuric acid","Hydrochloric acid","Nitric acid","Phosphoric acid"],"ans":0,"e":"Sulphuric acid (oil of vitriol) chars tissue by intense dehydration."},
+  {"c":"corrosive","q":"Which corrosive penetrates deeper because it does not form a protective eschar?","o":["Alkali","Sulphuric acid","Nitric acid","Carbolic acid"],"ans":0,"e":"Alkalis liquefy tissue and keep penetrating; acids coagulate and self-limit."},
+  {"c":"corrosive","q":"Treatment of corrosive acid ingestion should AVOID:","o":["Alkaline neutralisers and emesis","Water/milk demulcents","Analgesia","Airway protection"],"ans":0,"e":"Neutralisation is exothermic and emesis re-exposes the mucosa — both harmful."},
+  {"c":"corrosive","q":"A late complication of survived corrosive ingestion is:","o":["Oesophageal / pyloric stricture","Hepatic failure","Renal stones","Optic atrophy"],"ans":0,"e":"Healing fibrosis leads to strictures and obstruction weeks later."},
+  {"c":"corrosive","q":"\"Muriatic acid\" is the common name for:","o":["Hydrochloric acid","Nitric acid","Sulphuric acid","Oxalic acid"],"ans":0,"e":"HCl (muriatic acid) causes greyish/brown corrosion, less charring than sulphuric."},
+  {"c":"irritant","q":"Chronic cadmium poisoning causes which bone/renal disease?","o":["Itai-itai disease","Minamata disease","Pink disease","Milkman disease"],"ans":0,"e":"Cadmium causes osteomalacia with painful fractures (itai-itai) and tubular damage."},
+  {"c":"irritant","q":"Chronic manganese exposure (miners) produces:","o":["Parkinsonism","Wrist drop","Alopecia","Cherry-red skin"],"ans":0,"e":"Manganism resembles Parkinson’s disease with extrapyramidal features."},
+  {"c":"irritant","q":"Arsine gas exposure characteristically causes:","o":["Massive intravascular haemolysis","Convulsions","Alopecia","Cyanide-like block"],"ans":0,"e":"Arsine is a potent haemolysin causing haemoglobinuria and renal failure."},
+  {"c":"irritant","q":"Lead inhibits haem synthesis chiefly by blocking:","o":["ALA dehydratase and ferrochelatase","Cytochrome oxidase","Acetylcholinesterase","Monoamine oxidase"],"ans":0,"e":"This causes anaemia with basophilic stippling and raised protoporphyrin."},
+  {"c":"irritant","q":"The most toxic and neurotoxic form of mercury is:","o":["Organic (methyl) mercury","Elemental liquid mercury","Mercurous salts","Mercuric oxide"],"ans":0,"e":"Methylmercury crosses the blood-brain barrier and placenta (Minamata disease)."},
+  {"c":"irritant","q":"Minamata disease resulted from environmental contamination with:","o":["Methylmercury","Cadmium","Arsenic","Lead"],"ans":0,"e":"Industrial methylmercury in fish caused the Minamata epidemic in Japan."},
+  {"c":"irritant","q":"The chelator of choice for copper (and Wilson’s disease) is:","o":["D-penicillamine","Desferrioxamine","Prussian blue","Succimer"],"ans":0,"e":"Penicillamine mobilises copper; also used for lead and mercury."},
+  {"c":"irritant","q":"Zinc phosphide (rodenticide) is toxic because it liberates:","o":["Phosphine gas","Cyanide","Arsine","Carbon monoxide"],"ans":0,"e":"Like aluminium phosphide, it releases phosphine on contact with gastric acid."},
+  {"c":"irritant","q":"Croton oil (Croton tiglium seeds) acts as a:","o":["Drastic purgative and vesicant","CNS stimulant","Cardiac glycoside","Neurotoxin"],"ans":0,"e":"A violent irritant purgative; the oil also blisters skin."},
+  {"c":"irritant","q":"Calotropis (madar/aak) latex is medico-legally used as a/an:","o":["Cattle poison / abortifacient / arrow poison","Sedative","Corrosive","Cardiac tonic"],"ans":0,"e":"The acrid milky latex is an irritant used to poison cattle and induce abortion."},
+  {"c":"irritant","q":"Ricin (castor) kills cells by:","o":["Inhibiting ribosomal protein synthesis","Blocking cholinesterase","Chelating calcium","Uncoupling oxidative phosphorylation"],"ans":0,"e":"Ricin’s A-chain depurinates rRNA, halting protein synthesis."},
+  {"c":"irritant","q":"The drug of choice for Indian red scorpion sting with autonomic storm is:","o":["Prazosin","Atropine","Neostigmine","Adrenaline infusion"],"ans":0,"e":"Prazosin (alpha-blocker) counters the catecholamine surge and pulmonary oedema."},
+  {"c":"irritant","q":"Coagulopathy after a viper bite is best monitored bedside by:","o":["20-minute whole blood clotting test","Bleeding time","Peripheral smear","D-dimer only"],"ans":0,"e":"The 20-min WBCT is a simple field test for venom-induced consumptive coagulopathy."},
+  {"c":"irritant","q":"In neurotoxic (cobra) envenomation, neuromuscular blockade may be reversed with:","o":["Neostigmine plus atropine","Prazosin","Calcium gluconate","Physostigmine"],"ans":0,"e":"Anticholinesterase (with atropine) can improve post-synaptic block; ASV is definitive."},
+  {"c":"irritant","q":"Thallium poisoning is distinctively associated with:","o":["Alopecia with painful neuropathy","Blue gum line","Rice-water stools","Cherry-red lividity"],"ans":0,"e":"Hair loss plus painful peripheral neuropathy; antidote Prussian blue."},
+  {"c":"irritant","q":"Basophilic stippling of red cells is characteristic of poisoning by:","o":["Lead","Mercury","Copper","Arsenic"],"ans":0,"e":"Stippling reflects impaired haem synthesis and RNA aggregation in lead poisoning."},
+  {"c":"neurotic","q":"Heroin is chemically:","o":["Diacetylmorphine","Codeine","Pethidine","Methadone"],"ans":0,"e":"Heroin is diacetylmorphine, a rapidly-acting semisynthetic opioid."},
+  {"c":"neurotic","q":"A \"body packer\" who ingests drug-filled packets is at greatest risk if a packet:","o":["Ruptures causing massive overdose","Passes intact","Is radiolucent","Dissolves slowly in urine"],"ans":0,"e":"Packet rupture releases a lethal bolus (e.g., cocaine/heroin) internally."},
+  {"c":"neurotic","q":"Ethylene glycol (antifreeze) poisoning produces which urinary crystals?","o":["Calcium oxalate","Uric acid","Cystine","Struvite"],"ans":0,"e":"Metabolism to oxalic acid causes calcium-oxalate crystalluria and renal failure; antidote fomepizole/ethanol."},
+  {"c":"neurotic","q":"Isopropyl alcohol poisoning classically causes:","o":["Ketosis without significant acidosis","Severe metabolic acidosis","Blindness","Oxalate crystals"],"ans":0,"e":"It is metabolised to acetone — ketosis but little acidosis, unlike methanol/ethylene glycol."},
+  {"c":"neurotic","q":"Cocaine intoxication typically causes:","o":["Mydriasis, hypertension, MI risk","Miosis and bradycardia","Salivation and diarrhoea","Flaccid paralysis"],"ans":0,"e":"A sympathomimetic — dilated pupils, hypertension, arrhythmia and coronary spasm."},
+  {"c":"neurotic","q":"Chronic intranasal cocaine use characteristically causes:","o":["Nasal septal perforation","Gum hyperplasia","Wrist drop","Cataract"],"ans":0,"e":"Vasoconstriction leads to ischaemic necrosis and septal perforation."},
+  {"c":"neurotic","q":"The antidote sequence for opioid overdose is:","o":["Naloxone (repeat/infuse)","Flumazenil","Physostigmine","Atropine"],"ans":0,"e":"Naloxone reverses respiratory depression but is short-acting, so re-dosing is needed."},
+  {"c":"neurotic","q":"\"Barbiturate blisters\" are found:","o":["Over pressure points","On the palms only","In the mouth","On the soles only"],"ans":0,"e":"Bullae over pressure areas are a classic post-mortem sign of barbiturate coma."},
+  {"c":"neurotic","q":"Delirium tremens is a withdrawal syndrome of:","o":["Alcohol","Opioids","Cannabis","Cocaine"],"ans":0,"e":"DT features tremor, agitation, autonomic storm and hallucinations after alcohol cessation."},
+  {"c":"neurotic","q":"Wernicke encephalopathy in alcoholics is treated with:","o":["Thiamine (before glucose)","Folinic acid","Naloxone","Pyridoxine"],"ans":0,"e":"Give thiamine before/with glucose to prevent precipitating Wernicke’s."},
+  {"c":"neurotic","q":"Curare acts at the neuromuscular junction as a:","o":["Competitive (non-depolarising) blocker","Depolarising blocker","Cholinesterase inhibitor","Sodium-channel opener"],"ans":0,"e":"Curare competitively blocks nicotinic ACh receptors; reversed by neostigmine."},
+  {"c":"neurotic","q":"Strychnine produces convulsions by antagonising which inhibitory transmitter?","o":["Glycine","GABA","Dopamine","Serotonin"],"ans":0,"e":"Blocking spinal glycine removes inhibition, causing reflex convulsions with retained consciousness."},
+  {"c":"neurotic","q":"Cannabis resin is known as:","o":["Charas","Bhang","Ganja","Sulfa"],"ans":0,"e":"Charas = resin; ganja = flowering tops; bhang = leaf preparation."},
+  {"c":"neurotic","q":"The chief psychoactive constituent of cannabis is:","o":["Delta-9-THC","Cannabidiol","Cathinone","Mescaline"],"ans":0,"e":"Delta-9-tetrahydrocannabinol is the main psychoactive agent."},
+  {"c":"neurotic","q":"Which produces pinpoint pupils?","o":["Opioids and organophosphates","Cocaine and atropine","Datura and amphetamine","Cyanide"],"ans":0,"e":"Both opioids and OP compounds cause miosis (though mechanisms differ)."},
+  {"c":"neurotic","q":"Which drug of abuse is a classic hallucinogen?","o":["LSD","Heroin","Barbiturate","Alcohol"],"ans":0,"e":"LSD (lysergic acid diethylamide) is a serotonergic hallucinogen."},
+  {"c":"neurotic","q":"Methanol and ethylene glycol both share which antidote?","o":["Fomepizole (or ethanol)","Naloxone","Atropine","Methylene blue"],"ans":0,"e":"Both are metabolised by alcohol dehydrogenase, which fomepizole/ethanol inhibits."},
+  {"c":"neurotic","q":"\"Run amok\" (sudden homicidal frenzy) is historically linked to:","o":["Cannabis","Opium","Cocaine","Barbiturates"],"ans":0,"e":"Cannabis intoxication has classically been associated with amok behaviour."},
+  {"c":"cardiac","q":"Xanthopsia (yellow vision) is a classic feature of toxicity from:","o":["Digitalis/digoxin","Aconite","Nicotine","Oleander"],"ans":0,"e":"Digoxin toxicity causes yellow-green vision, nausea and arrhythmias; treat with digoxin-Fab."},
+  {"c":"cardiac","q":"The specific antidote for life-threatening digoxin/oleander toxicity is:","o":["Digoxin-specific Fab antibodies","Atropine only","Calcium gluconate","Magnesium"],"ans":0,"e":"Fab fragments bind the glycoside; also correct hyperkalaemia and bradyarrhythmia."},
+  {"c":"cardiac","q":"The \"suicide tree\" of Kerala, a potent cardiac-glycoside plant, is:","o":["Cerbera odollam","Nerium oleander","Aconitum","Digitalis purpurea"],"ans":0,"e":"Cerbera odollam (odollam/othalanga) is a notorious suicidal/homicidal cardiac poison."},
+  {"c":"cardiac","q":"Digitalis is derived from which plant?","o":["Foxglove","Lily of the valley","Squill","Hellebore"],"ans":0,"e":"Digitalis purpurea (foxglove) is the source of the cardiac glycoside digitalis."},
+  {"c":"cardiac","q":"Aconite is regarded as:","o":["One of the most toxic Indian plants","A mild sedative","A corrosive","A simple purgative"],"ans":0,"e":"Aconitine is intensely cardiotoxic; the root is used as arrow and homicidal poison."},
+  {"c":"cardiac","q":"\"Green tobacco sickness\" in harvesters is due to dermal absorption of:","o":["Nicotine","Aconitine","Oleandrin","Digoxin"],"ans":0,"e":"Wet tobacco leaves deliver nicotine transdermally, causing nausea and weakness."},
+  {"c":"cardiac","q":"Cardiac glycoside poisoning typically produces which electrolyte disturbance in acute overdose?","o":["Hyperkalaemia","Hypokalaemia","Hypernatraemia","Hypocalcaemia"],"ans":0,"e":"Na/K-ATPase inhibition raises serum potassium, a marker of severity."},
+  {"c":"cardiac","q":"Nicotine acts at nicotinic receptors by initial:","o":["Stimulation then blockade","Pure blockade","Pure stimulation","Reuptake inhibition"],"ans":0,"e":"A biphasic action: early ganglionic stimulation followed by depolarising blockade."},
+  {"c":"asphyxiant","q":"Cyanide is lethal because it inhibits:","o":["Cytochrome c oxidase","Acetylcholinesterase","Na/K-ATPase","Carbonic anhydrase"],"ans":0,"e":"It blocks the terminal electron-transport enzyme, causing histotoxic hypoxia."},
+  {"c":"asphyxiant","q":"The characteristic odour in cyanide poisoning is:","o":["Bitter almonds","Rotten eggs","Garlic","Freshly cut hay"],"ans":0,"e":"A bitter-almond smell (detectable only by some people genetically)."},
+  {"c":"asphyxiant","q":"A classic antidote regimen for cyanide poisoning includes:","o":["Sodium nitrite + sodium thiosulphate","Atropine + pralidoxime","Naloxone","Desferrioxamine"],"ans":0,"e":"Nitrites form methaemoglobin (binds cyanide); thiosulphate aids detox to thiocyanate. Hydroxocobalamin is an alternative."},
+  {"c":"asphyxiant","q":"Methaemoglobinaemia (e.g., from nitrites) is treated with:","o":["Methylene blue","Sodium thiosulphate","BAL","Flumazenil"],"ans":0,"e":"Methylene blue reduces methaemoglobin back to functional haemoglobin."},
+  {"c":"asphyxiant","q":"Chocolate-brown coloured blood suggests:","o":["Methaemoglobinaemia","Carbon monoxide","Cyanide","Hydrogen sulphide"],"ans":0,"e":"Oxidised (ferric) haemoglobin gives blood a chocolate-brown hue."},
+  {"c":"asphyxiant","q":"Which is a \"simple\" (displacement) asphyxiant with no direct toxicity?","o":["Carbon dioxide","Carbon monoxide","Hydrogen sulphide","Cyanide"],"ans":0,"e":"CO2 (choke/black damp) kills by displacing oxygen in confined spaces."},
+  {"c":"asphyxiant","q":"The war gas whose antidote (BAL) was specifically developed against it is:","o":["Lewisite","Phosgene","Chlorine","Mustard gas"],"ans":0,"e":"Lewisite is an arsenical vesicant; BAL (British Anti-Lewisite) chelates its arsenic."},
+  {"c":"asphyxiant","q":"A common domestic source of carbon monoxide poisoning is:","o":["Faulty gas heaters / vehicle exhaust","Bleach fumes","Ammonia cleaners","Kerosene ingestion"],"ans":0,"e":"Incomplete combustion in heaters, geysers and engines generates CO."},
+  {"c":"agri","q":"The \"intermediate syndrome\" after organophosphate poisoning appears:","o":["24-96 hours later, with proximal/respiratory weakness","Within minutes","After 2-3 weeks","Only after months"],"ans":0,"e":"A delayed proximal-muscle and respiratory weakness 1-4 days post-exposure."},
+  {"c":"agri","q":"Organophosphate-induced delayed neuropathy (OPIDN) is due to inhibition of:","o":["Neuropathy target esterase","Acetylcholinesterase","Cytochrome oxidase","Monoamine oxidase"],"ans":0,"e":"NTE inhibition causes a delayed distal sensorimotor neuropathy weeks later."},
+  {"c":"agri","q":"The end-point (\"atropinisation\") in OP poisoning is best judged by:","o":["Drying of chest secretions","Fixed dilated pupils","Bradycardia","Salivation"],"ans":0,"e":"Titrate atropine to clear chest secretions and a dry mouth, not to pupil size."},
+  {"c":"agri","q":"Pralidoxime works only if given before the enzyme undergoes:","o":["\"Ageing\"","Phosphorylation","Reactivation","Hydrolysis"],"ans":0,"e":"Once the OP-enzyme complex \"ages\", oximes can no longer reactivate it."},
+  {"c":"agri","q":"Aluminium phosphide is lethal chiefly through:","o":["Refractory shock from phosphine","Massive haemolysis","Optic atrophy","Coagulopathy"],"ans":0,"e":"Phosphine causes profound myocardial depression and vasodilatory shock; there is no antidote."},
+  {"c":"agri","q":"A useful bedside screen for phosphine (aluminium phosphide) is the:","o":["Silver nitrate paper test","Marsh test","Reinsch test","Guaiac test"],"ans":0,"e":"Phosphine blackens silver-nitrate-impregnated paper held over breath/gastric aspirate."},
+  {"c":"agri","q":"The adsorbent traditionally given in paraquat poisoning is:","o":["Fuller’s earth (or activated charcoal)","Milk","Egg white","Starch"],"ans":0,"e":"Fuller’s earth binds paraquat in the gut; early haemoperfusion may help."},
+  {"c":"agri","q":"Death in paraquat poisoning is usually due to:","o":["Progressive pulmonary fibrosis","Cardiac arrest at once","Hepatic coma","Renal calculi"],"ans":0,"e":"Delayed lung fibrosis causes respiratory failure over days."},
+  {"c":"agri","q":"Warfarin/\"superwarfarin\" rodenticide poisoning is treated with:","o":["Vitamin K1 (and FFP if bleeding)","Protamine","Vitamin C","Calcium"],"ans":0,"e":"These block vitamin-K-dependent clotting factors; long-acting types need prolonged vitamin K."},
+  {"c":"agri","q":"Pyrethroid insecticides are notable for:","o":["Low mammalian toxicity with paraesthesiae","High mammalian lethality","Cyanide release","Optic atrophy"],"ans":0,"e":"Generally low systemic toxicity; facial paraesthesiae and, rarely, seizures."},
+  {"c":"agri","q":"Endosulfan, an organochlorine, characteristically causes:","o":["Convulsions","Miosis and salivation","Cherry-red skin","Alopecia"],"ans":0,"e":"Organochlorines are CNS stimulants producing seizures; endosulfan is now banned in many places."},
+  {"c":"agri","q":"Chlorpyrifos and malathion belong to which class?","o":["Organophosphates","Carbamates","Organochlorines","Pyrethroids"],"ans":0,"e":"Both are organophosphate insecticides — cholinesterase inhibitors."},
+  {"c":"agri","q":"Which lavage/decontamination is traditionally used for aluminium phosphide?","o":["Potassium permanganate and coconut oil","Milk of magnesia","Sodium bicarbonate","Egg albumin"],"ans":0,"e":"KMnO4 oxidises phosphine and coconut oil retards its release; care with airway."},
+  {"c":"agri","q":"Carbaryl and propoxur are examples of:","o":["Carbamates","Organophosphates","Organochlorines","Bipyridyls"],"ans":0,"e":"Carbamate insecticides — reversible cholinesterase inhibitors; oximes usually unnecessary."},
+  {"c":"history","q":"Orfila, the father of toxicology, was born in:","o":["Spain (Minorca)","France","Italy","Germany"],"ans":0,"e":"Spanish-born; he worked and taught in Paris."},
+  {"c":"history","q":"James Marsh, who devised the arsenic test, was a:","o":["British chemist","French physician","German botanist","Italian jurist"],"ans":0,"e":"Marsh (1836) produced a sensitive arsenic-mirror test."},
+  {"c":"history","q":"Analysis of Napoleon Bonaparte’s hair suggested chronic exposure to:","o":["Arsenic","Lead","Mercury","Antimony"],"ans":0,"e":"Elevated arsenic in preserved hair fuelled the poisoning debate."},
+  {"c":"history","q":"\"Phossy jaw\" in 19th-century match-factory workers was caused by:","o":["White (yellow) phosphorus","Lead","Mercury","Arsenic"],"ans":0,"e":"Chronic phosphorus vapour caused osteonecrosis of the jaw."},
+  {"c":"history","q":"The \"Radium Girls\" developed jaw osteonecrosis from occupational:","o":["Radium","Radon","Uranium","Thorium"],"ans":0,"e":"Ingested radium (from luminous-dial painting) deposited in bone."},
+  {"c":"history","q":"The 1984 Bhopal gas disaster released:","o":["Methyl isocyanate","Chlorine","Phosgene","Cyanide gas"],"ans":0,"e":"A massive leak of methyl isocyanate (MIC) caused thousands of deaths."},
+  {"c":"history","q":"Zyklon B, used in Nazi gas chambers, liberated:","o":["Hydrogen cyanide","Carbon monoxide","Chlorine","Phosgene"],"ans":0,"e":"Zyklon B released hydrocyanic (prussic) acid gas."},
+  {"c":"history","q":"Georgi Markov (\"umbrella murder\", London 1978) was killed with:","o":["Ricin","Polonium","Cyanide","Thallium"],"ans":0,"e":"A ricin pellet was injected via a modified umbrella."},
+  {"c":"history","q":"Alexander Litvinenko (London, 2006) was poisoned with the radioactive:","o":["Polonium-210","Thallium","Radium","Caesium"],"ans":0,"e":"Polonium-210, an alpha-emitter, was used in his assassination."},
+  {"c":"history","q":"The 1995 Tokyo subway terror attack used the nerve agent:","o":["Sarin","VX","Tabun","Soman"],"ans":0,"e":"Aum Shinrikyo released sarin, an organophosphate nerve agent."},
+  {"c":"history","q":"\"Mad Hatter\" syndrome in old hat-makers resulted from chronic:","o":["Mercury","Lead","Arsenic","Manganese"],"ans":0,"e":"Mercuric nitrate used in felting caused erethism and tremor."},
+  {"c":"history","q":"Percivall Pott first linked scrotal cancer in chimney sweeps to:","o":["Soot","Coal gas","Arsenic","Lead"],"ans":0,"e":"The earliest recognised occupational chemical carcinogen (soot/PAHs)."},
+  {"c":"history","q":"Bernardino Ramazzini is regarded as the father of:","o":["Occupational medicine","Toxicology","Forensic pathology","Pharmacology"],"ans":0,"e":"He described diseases of trades in \"De Morbis Artificum\"."},
+  {"c":"history","q":"The thalidomide tragedy demonstrated a drug acting as a:","o":["Teratogen","Carcinogen","Mutagen only","Corrosive"],"ans":0,"e":"Thalidomide caused phocomelia, transforming drug-safety regulation."},
+  {"c":"history","q":"The classical \"universal antidote\" (charcoal, magnesia, tannic acid) is now regarded as:","o":["Obsolete and ineffective","The first-line antidote","Specific for metals","Specific for alkaloids"],"ans":0,"e":"It has been abandoned; activated charcoal alone is preferred."},
+  {"c":"history","q":"EDTA chelation therapy was introduced mainly to treat poisoning by:","o":["Lead","Arsenic","Iron","Thallium"],"ans":0,"e":"Calcium-disodium EDTA is a mainstay for lead."},
+  {"c":"history","q":"The Reinsch test deposits metals on a strip of:","o":["Copper","Zinc","Silver","Iron"],"ans":0,"e":"Arsenic/mercury/antimony/bismuth deposit on copper (Reinsch test)."},
+  {"c":"history","q":"\"LD50\" refers to the dose that is:","o":["Lethal to 50% of test animals","Effective in 50%","Toxic in 5%","Safe in 50%"],"ans":0,"e":"A standard measure of acute toxicity (median lethal dose)."},
+  {"c":"history","q":"The definitive modern method to identify an unknown poison is:","o":["Gas chromatography–mass spectrometry","Marsh test","Reinsch test","Paper chromatography"],"ans":0,"e":"GC-MS separates and confirms compound identity."},
+  {"c":"history","q":"Hair analysis is valuable in poisoning because hair provides:","o":["A retrospective, long-term record of exposure","Rapid excretion","Volatile detection","Real-time levels"],"ans":0,"e":"Metals like arsenic deposit sequentially along the growing shaft."},
+  {"c":"history","q":"Dioscorides’ \"De Materia Medica\" was an early treatise on:","o":["Medicinal plants and poisons","Surgery","Anatomy","Law"],"ans":0,"e":"A foundational 1st-century pharmacology/toxicology text."},
+  {"c":"history","q":"Serial poisoner Thomas Neill Cream favoured the poison:","o":["Strychnine","Arsenic","Cyanide","Aconite"],"ans":0,"e":"His victims died of strychnine convulsions."},
+  {"c":"history","q":"\"Spanish fly\", an ancient aphrodisiac and vesicant, is derived from:","o":["Cantharides beetle","A plant root","A snake","A mineral"],"ans":0,"e":"Cantharidin from blister beetles causes vesication and priapism."},
+  {"c":"history","q":"Volatile poisons such as alcohols are best analysed by:","o":["Gas chromatography","Reinsch test","Marsh test","Microscopy"],"ans":0,"e":"Headspace GC is standard for volatiles."},
+  {"c":"history","q":"\"All substances are poisons; the right dose differentiates a poison from a remedy\" is the essence of:","o":["The dose–response principle","The universal antidote","Idiosyncrasy","Synergism"],"ans":0,"e":"Paracelsus’ central toxicological principle."},
+  {"c":"general","q":"Atropine used against organophosphate poisoning is an example of:","o":["Physiological antagonism","Synergism","Idiosyncrasy","Potentiation"],"ans":0,"e":"Atropine counters the muscarinic overactivity (functional antagonism)."},
+  {"c":"general","q":"\"Tolerance\" means:","o":["Reduced effect requiring larger doses","Abnormal reaction to small dose","Accumulation of poison","Combined effect greater than sum"],"ans":0,"e":"Repeated exposure diminishes response (e.g., opioids)."},
+  {"c":"general","q":"\"Potentiation\" differs from synergism in that one agent:","o":["Has no effect alone but enhances the other","Opposes the other","Equals the other","Is inert always"],"ans":0,"e":"An inactive agent magnifies the action of an active one."},
+  {"c":"general","q":"The ideal suicidal poison should be:","o":["Easily available, cheap, painless, certain","Odourless and undetectable","Resembling natural disease","Slow and silent"],"ans":0,"e":"Suicidal choice favours availability and a quick, painless, sure death."},
+  {"c":"general","q":"In a decomposed body, the best samples for toxicology include:","o":["Liver, muscle, bone, hair and nails","Only stomach contents","Only urine","Only bile"],"ans":0,"e":"These resist putrefaction and retain metals/drugs."},
+  {"c":"general","q":"Vitreous humour is a valued sample because it:","o":["Resists decomposition and is relatively isolated","Contains high drug levels always","Is easy to preserve in formalin","Reflects gastric contents"],"ans":0,"e":"Its isolation and slow decay make it useful for alcohol/electrolytes."},
+  {"c":"general","q":"Formalin must NOT be used to preserve viscera because it:","o":["Interferes with chemical analysis","Is too expensive","Dissolves tissue","Causes false positives for alcohol only"],"ans":0,"e":"Formaldehyde reacts with poisons and hinders detection."},
+  {"c":"general","q":"A separate, sealed sample of the preservative is sent to the lab as a:","o":["Control (blank)","Duplicate viscera","Antidote","Reagent"],"ans":0,"e":"The control confirms the preservative itself is not contaminated."},
+  {"c":"general","q":"Multiple-dose activated charcoal is useful for drugs with:","o":["Enterohepatic recirculation","Large volume of distribution only","High protein binding only","Renal excretion only"],"ans":0,"e":"It interrupts recirculation (e.g., theophylline, carbamazepine, dapsone)."},
+  {"c":"general","q":"Whole-bowel irrigation is indicated for:","o":["Iron, lithium, body packers, sustained-release drugs","Corrosives","Hydrocarbons","Alcohol"],"ans":0,"e":"It flushes the gut when charcoal is ineffective (metals, packets)."},
+  {"c":"general","q":"Haemodialysis is effective for poisons that are:","o":["Small, water-soluble, low protein binding, low Vd","Large and lipophilic","Highly protein-bound","Volatile only"],"ans":0,"e":"Methanol, ethylene glycol, salicylate and lithium are dialysable."},
+  {"c":"general","q":"Which is generally NOT removed well by haemodialysis?","o":["Digoxin (large Vd)","Lithium","Methanol","Salicylate"],"ans":0,"e":"Large volume of distribution/high tissue binding limits dialysis."},
+  {"c":"general","q":"The antidote for paracetamol (acetaminophen) poisoning is:","o":["N-acetylcysteine","Naloxone","Flumazenil","Fomepizole"],"ans":0,"e":"NAC replenishes glutathione; most effective within 8 hours."},
+  {"c":"general","q":"The antidote for beta-blocker overdose (refractory) is:","o":["Glucagon","Atropine only","Calcium chelation","Naloxone"],"ans":0,"e":"Glucagon raises cardiac cAMP independently of beta-receptors."},
+  {"c":"general","q":"Octreotide is used as an adjunct antidote in poisoning by:","o":["Sulphonylureas","Beta-blockers","Opioids","Iron"],"ans":0,"e":"It suppresses insulin release in refractory sulphonylurea hypoglycaemia."},
+  {"c":"general","q":"The antidote for heparin overdose is:","o":["Protamine sulphate","Vitamin K","FFP only","Aminocaproic acid"],"ans":0,"e":"Protamine neutralises heparin; vitamin K reverses warfarin."},
+  {"c":"general","q":"Hydroxocobalamin is a specific antidote for:","o":["Cyanide","Carbon monoxide","Methaemoglobinaemia","Arsenic"],"ans":0,"e":"It binds cyanide to form cyanocobalamin (excreted in urine)."},
+  {"c":"general","q":"Match: N-acetylcysteine is to paracetamol as pralidoxime is to:","o":["Organophosphate","Iron","Cyanide","Warfarin"],"ans":0,"e":"Pralidoxime reactivates cholinesterase in OP poisoning."},
+  {"c":"general","q":"Syrup of ipecac (an emetic) is now:","o":["Largely abandoned in routine care","First-line for all ingestions","Given with corrosives","Used before charcoal always"],"ans":0,"e":"Routine emesis is no longer recommended due to poor benefit/risk."},
+  {"c":"general","q":"Emesis and gastric lavage are BOTH contraindicated in:","o":["Corrosive and hydrocarbon ingestion","Aspirin overdose","Iron overdose","Barbiturate overdose"],"ans":0,"e":"Risk of perforation and aspiration respectively."},
+  {"c":"general","q":"The commonest cause of fatal poisoning in the developing world is:","o":["Pesticides","Opioids","Corrosives","Paracetamol"],"ans":0,"e":"Agricultural pesticide self-poisoning predominates globally in rural areas."},
+  {"c":"general","q":"Occupational lead exposure is classically seen in:","o":["Battery and paint industries","Bakeries","Textile dyeing only","Fishing"],"ans":0,"e":"Smelting, battery manufacture and old paints are key lead sources."},
+  {"c":"general","q":"A poison producing \"cumulative\" toxicity is best exemplified by:","o":["Arsenic","Cyanide","Strychnine (acute)","Carbon monoxide"],"ans":0,"e":"Slow excretion causes arsenic to accumulate with repeated dosing."},
+  {"c":"general","q":"Chelation is the treatment principle for poisoning by:","o":["Heavy metals","Organophosphates","Opioids","Corrosives"],"ans":0,"e":"Chelators bind metals into excretable complexes."},
+  {"c":"general","q":"The doctor’s duty in a suspected homicidal poisoning includes:","o":["Preserving evidence and informing police","Discharging quietly","Destroying samples","Treating without records"],"ans":0,"e":"It is a medico-legal case requiring documentation and reporting."},
+  {"c":"general","q":"\"Fulminant\" poisoning refers to:","o":["A massive dose causing death before full symptoms","Slow chronic exposure","A cumulative effect","An idiosyncratic reaction"],"ans":0,"e":"Overwhelming dose leads to rapid collapse and death."},
+  {"c":"general","q":"The volume of preservative added to viscera should be about:","o":["Enough to fully submerge (roughly twice the tissue)","A few drops","Equal to blood volume","None"],"ans":0,"e":"Adequate preservative must cover the specimens."},
+  {"c":"general","q":"Skin decontamination is a priority in poisoning by:","o":["Organophosphates and corrosives on skin","Ingested iron","Inhaled CO","Swallowed lithium"],"ans":0,"e":"Dermal absorption continues until the skin is thoroughly washed."},
+  {"c":"general","q":"The term \"antidote\" that acts by chemical binding (e.g., chelators) is a:","o":["Chemical antidote","Physiological antidote","Mechanical antidote","Universal antidote"],"ans":0,"e":"Chemical antidotes neutralise or bind the poison directly."},
+  {"c":"general","q":"A \"mechanical antidote\" works by:","o":["Preventing absorption (e.g., activated charcoal)","Opposing physiological effect","Chemically neutralising","Enhancing metabolism"],"ans":0,"e":"Charcoal and demulcents physically limit absorption."},
+  {"c":"general","q":"Enhanced elimination by urinary alkalinisation suits weak acids such as:","o":["Salicylates and phenobarbital","Amphetamine","Quinidine","Strychnine"],"ans":0,"e":"Ion trapping in alkaline urine speeds excretion of weak acids."},
+  {"c":"general","q":"A poison that mimics a natural disease is desirable in a:","o":["Homicidal poison","Suicidal poison","Accidental exposure","Occupational toxin"],"ans":0,"e":"Resemblance to natural illness helps conceal homicide."},
+  {"c":"general","q":"\"Chronic arsenic, lead and mercury\" poisoning share the feature of being:","o":["Cumulative poisons","Rapidly excreted","Corrosive locally","Purely neurotoxic"],"ans":0,"e":"All accumulate faster than they are eliminated."},
+  {"c":"general","q":"Dantrolene is the specific treatment for:","o":["Malignant hyperthermia","Cyanide poisoning","Iron overdose","Serotonin syndrome only"],"ans":0,"e":"It reduces skeletal-muscle calcium release in malignant hyperthermia."},
+  {"c":"general","q":"The single most useful initial specimen in a living poisoned patient is often:","o":["Blood (and urine)","Bile","Bone","Hair"],"ans":0,"e":"Blood and urine allow prompt qualitative and quantitative analysis."},
+  {"c":"corrosive","q":"Mineral acids characteristically cause which type of necrosis?","o":["Coagulative","Liquefactive","Caseous","Gangrenous"],"ans":0,"e":"Acids coagulate proteins, forming a self-limiting eschar."},
+  {"c":"corrosive","q":"\"Salt of sorrel\" / \"salt of lemon\" is a household name for:","o":["Oxalic acid","Citric acid","Acetic acid","Formic acid"],"ans":0,"e":"Oxalic acid is sold as a bleach/stain remover under these names."},
+  {"c":"corrosive","q":"Lysol is a corrosive preparation of:","o":["Cresol (a phenolic)","Sulphuric acid","Sodium hydroxide","Oxalic acid"],"ans":0,"e":"Lysol is a cresol-soap solution — corrosive with phenolic effects."},
+  {"c":"corrosive","q":"Phenol (carbolic acid) applied to skin is deceptive because it is initially:","o":["Painless (local anaesthetic)","Extremely painful","Bright yellow","Odourless"],"ans":0,"e":"Phenol’s local anaesthetic action masks the injury; a white then brown slough forms."},
+  {"c":"corrosive","q":"Glacial acetic acid ingestion can cause corrosion plus:","o":["Intravascular haemolysis","Hypercalcaemia","Alopecia","Cherry-red skin"],"ans":0,"e":"Concentrated acetic acid corrodes and can cause haemolysis and haemoglobinuria."},
+  {"c":"corrosive","q":"The eye is more severely damaged by splashes of:","o":["Alkali","Weak acid","Vinegar","Boric acid"],"ans":0,"e":"Alkalis penetrate deeply (liquefactive), threatening the whole globe."},
+  {"c":"corrosive","q":"Ammonia inhalation chiefly causes:","o":["Pulmonary irritation / oedema","Renal stones","Hepatic failure","Optic atrophy"],"ans":0,"e":"Ammonia is a pungent respiratory irritant causing airway and lung injury."},
+  {"c":"corrosive","q":"Ingested iodine can be neutralised in the stomach with:","o":["Starch (forms blue complex) + thiosulphate","Milk of magnesia","Vinegar","Calcium"],"ans":0,"e":"Starch binds iodine; sodium thiosulphate reduces it."},
+  {"c":"corrosive","q":"High-concentration hydrogen peroxide ingestion risks:","o":["Gas embolism (oxygen)","Cyanide release","Hypocalcaemia","Methaemoglobinaemia"],"ans":0,"e":"Rapid oxygen liberation can cause potentially fatal gas emboli."},
+  {"c":"corrosive","q":"The commonest agent used in \"vitriolage\" (acid attacks) is:","o":["Sulphuric acid","Boric acid","Acetic acid","Carbolic acid"],"ans":0,"e":"Concentrated sulphuric (also nitric/HCl) acid is thrown to disfigure."},
+  {"c":"corrosive","q":"Caustic soda and caustic potash are:","o":["Alkaline corrosives","Mineral acids","Organic acids","Phenolics"],"ans":0,"e":"NaOH and KOH cause deep liquefactive burns."},
+  {"c":"corrosive","q":"Chromic acid / dichromate corrosion is additionally complicated by:","o":["Nephrotoxicity and \"chrome ulcers\"","Blindness","Alopecia","Cherry-red skin"],"ans":0,"e":"Hexavalent chromium is corrosive, nephrotoxic and causes skin ulcers."},
+  {"c":"corrosive","q":"The best method to assess depth of injury after corrosive ingestion is:","o":["Upper GI endoscopy","Plain X-ray","Ultrasound","Barium swallow immediately"],"ans":0,"e":"Early endoscopy grades mucosal injury and guides management."},
+  {"c":"corrosive","q":"The commonest cause of early death after severe corrosive ingestion is:","o":["Shock and glottic oedema / perforation","Renal failure","Hepatic coma","Anaemia"],"ans":0,"e":"Airway oedema, shock and perforation dominate the acute phase."},
+  {"c":"corrosive","q":"Urine turning smoky/olive-green on standing indicates poisoning with:","o":["Phenol","Oxalic acid","Nitric acid","Formic acid"],"ans":0,"e":"Phenol metabolites oxidise, darkening the urine (carboluria)."},
+  {"c":"corrosive","q":"Oxalic acid causes tetany and cardiac effects by producing:","o":["Hypocalcaemia","Hyperkalaemia","Hypernatraemia","Alkalosis"],"ans":0,"e":"It chelates calcium; give calcium gluconate/lactate."},
+  {"c":"corrosive","q":"Silver nitrate (\"lunar caustic\") is corrosive and chronically causes:","o":["Argyria (grey skin)","Blue gums","Alopecia","Xanthopsia"],"ans":0,"e":"Chronic silver deposition gives a slate-grey skin discolouration."},
+  {"c":"corrosive","q":"Late oesophageal strictures after corrosive ingestion form mainly at:","o":["Physiological narrowings of the oesophagus","The pylorus only","The duodenum","The cardia only"],"ans":0,"e":"Anatomical constrictions are where injury and fibrosis concentrate."},
+  {"c":"corrosive","q":"The antidote principle in corrosive ingestion is to:","o":["Dilute with water/milk, protect airway (no neutralisers)","Give strong alkali for acid","Induce vomiting","Give an emetic then charcoal"],"ans":0,"e":"Gentle dilution and supportive care; neutralisation is exothermic and harmful."},
+  {"c":"corrosive","q":"Formic acid poisoning may additionally cause:","o":["Metabolic acidosis and haemolysis","Hypercalcaemia","Cherry-red lividity","Optic atrophy alone"],"ans":0,"e":"Concentrated formic acid corrodes and produces acidosis/haemolysis."},
+  {"c":"corrosive","q":"Which acid produces charring and a brown-black eschar due to intense dehydration?","o":["Sulphuric acid","Hydrochloric acid","Acetic acid","Oxalic acid"],"ans":0,"e":"Sulphuric acid dehydrates tissue, charring it black."},
+  {"c":"corrosive","q":"Which acid produces a bright yellow eschar (xanthoproteic reaction)?","o":["Nitric acid","Sulphuric acid","Hydrochloric acid","Carbolic acid"],"ans":0,"e":"Nitric acid reacts with tissue proteins to give a yellow colour."},
+  {"c":"corrosive","q":"Rhubarb and star-fruit are dietary sources of:","o":["Oxalic acid / oxalates","Formic acid","Acetic acid","Carbolic acid"],"ans":0,"e":"High oxalate content can precipitate renal injury in susceptible people."},
+  {"c":"corrosive","q":"\"Corrosive sublimate\" is another name for:","o":["Mercuric chloride","Silver nitrate","Copper sulphate","Sodium hydroxide"],"ans":0,"e":"Mercuric chloride is corrosive locally and a systemic metallic poison."},
+  {"c":"corrosive","q":"Which is a phenolic corrosive with a characteristic odour and CNS depression?","o":["Carbolic acid (phenol)","Nitric acid","Oxalic acid","Sulphuric acid"],"ans":0,"e":"Phenol corrodes, smells characteristically and depresses the CNS."},
+  {"c":"corrosive","q":"The hallmark systemic danger of hydrofluoric acid burns is:","o":["Severe hypocalcaemia","Hyperkalaemia only","Cyanosis","Alopecia"],"ans":0,"e":"Fluoride binds calcium/magnesium; give calcium gluconate gel and IV calcium."},
+  {"c":"corrosive","q":"Which corrosive is least likely to cause external charring but corrodes internally?","o":["Hydrochloric acid","Sulphuric acid","Nitric acid","Chromic acid"],"ans":0,"e":"HCl (muriatic acid) causes greyish corrosion with less charring than sulphuric."},
+  {"c":"corrosive","q":"A common late complication requiring dilatation after alkali ingestion is:","o":["Oesophageal stricture","Gastric outlet stenosis only","Duodenal ulcer","Pancreatitis"],"ans":0,"e":"Alkalis chiefly injure the oesophagus, leading to strictures."},
+  {"c":"cardiac","q":"Cardiac glycosides (digitalis, oleander) act by inhibiting:","o":["Na+/K+-ATPase","Cytochrome oxidase","Acetylcholinesterase","Carbonic anhydrase"],"ans":0,"e":"Pump inhibition raises intracellular calcium and serum potassium."},
+  {"c":"cardiac","q":"Digitalis was first described (from foxglove) by:","o":["William Withering","William Harvey","James Marsh","Withering’s rival Orfila"],"ans":0,"e":"Withering documented foxglove’s use for dropsy in 1785."},
+  {"c":"cardiac","q":"Chronic digoxin toxicity is classically precipitated by:","o":["Hypokalaemia","Hyperkalaemia","Hypernatraemia","Hypochloraemia"],"ans":0,"e":"Low potassium enhances glycoside binding and toxicity."},
+  {"c":"cardiac","q":"Aconitine causes arrhythmia by acting on cardiac:","o":["Sodium channels (persistent activation)","Potassium channels only","Beta receptors","Calcium pumps"],"ans":0,"e":"Persistent Na-channel opening triggers ventricular arrhythmias."},
+  {"c":"cardiac","q":"Yellow oleander seeds are colloquially called:","o":["\"Lucky nut\"","\"Crab’s eye\"","\"Marking nut\"","\"Ordeal bean\""],"ans":0,"e":"Thevetia/Cerbera seeds (\"lucky nut\") are a common suicidal cardiac poison."},
+  {"c":"cardiac","q":"Quinine/quinidine overdose produces \"cinchonism\", featuring:","o":["Tinnitus, deafness and visual disturbance","Alopecia","Blue gums","Cherry-red skin"],"ans":0,"e":"Cinchonism includes tinnitus, deafness, blurred vision and cardiotoxicity."},
+  {"c":"cardiac","q":"Chloroquine self-poisoning is dangerously cardiotoxic; adjunct therapy includes:","o":["Diazepam and adrenaline (with K correction)","Naloxone","Atropine only","Methylene blue"],"ans":0,"e":"High-dose diazepam plus adrenaline improves survival in severe cases."},
+  {"c":"cardiac","q":"The electrolyte to monitor and correct in acute cardiac-glycoside poisoning is:","o":["Potassium","Calcium only","Sodium","Chloride"],"ans":0,"e":"Hyperkalaemia in acute overdose predicts severity; avoid calcium."},
+  {"c":"cardiac","q":"All parts of oleander are toxic, and danger also arises from:","o":["Smoke of burning plant","Only the ripe fruit","Only the roots","Only the flowers"],"ans":0,"e":"Even smoke from burning oleander can be toxic."},
+  {"c":"cardiac","q":"Nicotine is a potent insecticide historically marketed as:","o":["\"Black Leaf 40\"","\"Paris green\"","\"Gammexane\"","\"Celphos\""],"ans":0,"e":"Nicotine sulphate (\"Black Leaf 40\") was a commercial insecticide."},
+  {"c":"cardiac","q":"Aconite root is dangerously mistaken for:","o":["Horseradish","Onion","Potato","Carrot"],"ans":0,"e":"Its resemblance to horseradish/ginger causes accidental poisoning."},
+  {"c":"cardiac","q":"\"Monkshood\" and \"wolfsbane\" are common names for:","o":["Aconite","Oleander","Foxglove","Nux vomica"],"ans":0,"e":"Aconitum species; aconitine is intensely cardiotoxic."},
+  {"c":"cardiac","q":"Lily-of-the-valley and squill are additional sources of:","o":["Cardiac glycosides","Alkaloid stimulants","Cyanogenic glycosides","Corrosive oils"],"ans":0,"e":"Convallaria and squill contain digitalis-like glycosides."},
+  {"c":"cardiac","q":"A characteristic visual symptom of digoxin toxicity is:","o":["Yellow-green vision / halos","Tunnel vision","Night blindness","Red-green blindness"],"ans":0,"e":"Xanthopsia and haloed vision accompany nausea and arrhythmia."},
+  {"c":"cardiac","q":"Nicotine poisoning progresses from stimulation to:","o":["Neuromuscular blockade and respiratory failure","Pure bradycardia","Isolated hypertension","Slow recovery only"],"ans":0,"e":"Depolarising blockade causes paralysis and respiratory arrest."},
+  {"c":"cardiac","q":"The management of severe aconite poisoning is largely:","o":["Supportive with atropine and antiarrhythmics (no specific antidote)","Digoxin-Fab","Naloxone","Chelation"],"ans":0,"e":"There is no specific antidote; treat arrhythmias and support circulation."},
+  {"c":"cardiac","q":"\"Green tobacco sickness\" affects:","o":["Tobacco harvesters (dermal nicotine)","Only smokers","Only children","Battery workers"],"ans":0,"e":"Handling wet tobacco leaves delivers nicotine through the skin."},
+  {"c":"cardiac","q":"Digoxin has a narrow:","o":["Therapeutic index","Volume of distribution","Absorption window","Protein binding only"],"ans":0,"e":"Small margins between therapeutic and toxic levels make it hazardous."},
+  {"c":"cardiac","q":"Veratrum (hellebore) poisoning classically causes:","o":["Bradycardia and hypotension","Tachycardia and hypertension","Convulsions","Alopecia"],"ans":0,"e":"Veratrum alkaloids trigger a vagally-mediated bradycardia-hypotension."},
+  {"c":"cardiac","q":"The definitive antidote for life-threatening oleander/digoxin toxicity is:","o":["Digoxin-specific antibody (Fab) fragments","Atropine","Calcium","Sodium bicarbonate"],"ans":0,"e":"Fab binds circulating glycoside, reversing toxicity."},
+  {"c":"cardiac","q":"The class \"cardiac poisons\" includes all EXCEPT:","o":["Strychnine","Aconite","Oleander","Digitalis"],"ans":0,"e":"Strychnine is a spinal poison, not a cardiac poison."},
+  {"c":"cardiac","q":"Cerbera odollam is notorious in which Indian state for poisoning?","o":["Kerala","Punjab","Rajasthan","Assam"],"ans":0,"e":"The \"suicide tree\" is a well-known cardiac poison in Kerala."},
+  {"c":"cardiac","q":"The earliest symptom of aconite ingestion is:","o":["Tingling and numbness of tongue and mouth","Salivation","Diarrhoea","Blurred vision"],"ans":0,"e":"Aconitine causes immediate oral tingling spreading over the body."},
+  {"c":"cardiac","q":"Nicotine acts primarily at:","o":["Nicotinic acetylcholine receptors","Muscarinic receptors","Opioid receptors","GABA receptors"],"ans":0,"e":"It stimulates then blocks nicotinic receptors at ganglia and NMJ."},
+  {"c":"cardiac","q":"The commonest ECG change in significant cardiac-glycoside toxicity is:","o":["Bradyarrhythmias / AV block","Sinus tachycardia only","Long PR shortening","Peaked P waves"],"ans":0,"e":"Glycosides slow AV conduction, causing block and bradyarrhythmias."},
+  {"c":"asphyxiant","q":"Carbon monoxide impairs oxygen delivery by forming:","o":["Carboxyhaemoglobin","Methaemoglobin","Sulfhaemoglobin","Cyanmethaemoglobin"],"ans":0,"e":"COHb cannot carry O2 and shifts the dissociation curve leftward."},
+  {"c":"asphyxiant","q":"Pulse oximetry is unreliable in CO poisoning because it:","o":["Cannot distinguish COHb from O2Hb","Reads too low","Needs arterial line","Only works in sunlight"],"ans":0,"e":"Co-oximetry is required to measure carboxyhaemoglobin accurately."},
+  {"c":"asphyxiant","q":"Delayed sequelae of significant CO poisoning include:","o":["Neuropsychiatric deficits / parkinsonism","Cataract","Alopecia","Nephrolithiasis"],"ans":0,"e":"Delayed cognitive and movement disorders may follow days to weeks later."},
+  {"c":"asphyxiant","q":"Hyperbaric oxygen is particularly considered in CO poisoning when there is:","o":["Coma, cardiac ischaemia or pregnancy","Mild headache only","Normal COHb","Isolated cough"],"ans":0,"e":"Severe features and pregnancy are common indications for HBO."},
+  {"c":"asphyxiant","q":"Non-industrial cyanide exposure can occur from:","o":["Burning plastics/wool and apricot kernels","Rusting iron","Drinking chlorinated water","Aspirin overdose"],"ans":0,"e":"Combustion products and amygdalin-containing seeds/cassava release cyanide."},
+  {"c":"asphyxiant","q":"In cyanide poisoning, venous blood characteristically appears:","o":["Bright red (arterialised)","Chocolate-brown","Dark blue","Green"],"ans":0,"e":"Tissues cannot extract O2, so venous blood stays oxygen-rich and bright red."},
+  {"c":"asphyxiant","q":"Amyl/sodium nitrite works in cyanide poisoning by:","o":["Forming methaemoglobin that binds cyanide","Chelating cyanide directly","Reducing methaemoglobin","Alkalinising urine"],"ans":0,"e":"MetHb sequesters cyanide as cyanmethaemoglobin; thiosulphate then detoxifies it."},
+  {"c":"asphyxiant","q":"Hydrogen sulphide is dangerous partly because it causes:","o":["Olfactory fatigue then sudden collapse (\"knock-down\")","Slow chronic anaemia","Cherry-red skin","Alopecia"],"ans":0,"e":"Loss of smell removes warning, and high levels cause abrupt unconsciousness."},
+  {"c":"asphyxiant","q":"Agents causing methaemoglobinaemia include:","o":["Nitrites, aniline, dapsone, local anaesthetics","Opioids","Barbiturates","Warfarin"],"ans":0,"e":"These oxidise haemoglobin iron to the ferric (met) state."},
+  {"c":"asphyxiant","q":"Methaemoglobinaemia produces cyanosis that is:","o":["Unresponsive to supplemental oxygen","Relieved rapidly by oxygen","Only central","Only peripheral"],"ans":0,"e":"MetHb cannot bind O2, so oxygen does not correct the cyanosis."},
+  {"c":"asphyxiant","q":"Methylene blue is contraindicated (may worsen haemolysis) in patients with:","o":["G6PD deficiency","Hypertension","Asthma","Diabetes"],"ans":0,"e":"It relies on NADPH; in G6PD deficiency it can precipitate haemolysis."},
+  {"c":"asphyxiant","q":"Mustard gas is classified as a:","o":["Vesicant (blistering agent)","Simple asphyxiant","Nerve agent","Blood agent"],"ans":0,"e":"It alkylates DNA, causing delayed skin blistering and mucosal injury."},
+  {"c":"asphyxiant","q":"Phosgene poisoning is dangerous because of:","o":["Delayed pulmonary oedema","Immediate cardiac arrest","Alopecia","Optic atrophy"],"ans":0,"e":"After a latent period it causes severe, delayed non-cardiogenic pulmonary oedema."},
+  {"c":"asphyxiant","q":"Sarin, tabun and VX are:","o":["Organophosphate nerve agents","Vesicants","Simple asphyxiants","Lacrimators"],"ans":0,"e":"They inhibit acetylcholinesterase; treat with atropine, oxime and diazepam."},
+  {"c":"asphyxiant","q":"CS and CN gases are used chiefly as:","o":["Lacrimators (tear gas)","Vesicants","Nerve agents","Blood agents"],"ans":0,"e":"They intensely irritate eyes and mucosa (riot-control agents)."},
+  {"c":"asphyxiant","q":"\"Choke damp\" (black damp) accumulating in wells is mainly:","o":["Carbon dioxide","Carbon monoxide","Methane","Hydrogen sulphide"],"ans":0,"e":"CO2 displaces oxygen, causing a simple asphyxial death in confined spaces."},
+  {"c":"asphyxiant","q":"\"Fire damp\" in coal mines, an explosion and asphyxiation hazard, is:","o":["Methane","Carbon monoxide","Chlorine","Ammonia"],"ans":0,"e":"Methane accumulates in mines and can explode or displace oxygen."},
+  {"c":"asphyxiant","q":"Both cyanide and hydrogen sulphide are lethal because they inhibit:","o":["Cytochrome c oxidase","Acetylcholinesterase","Na/K-ATPase","Carbonic anhydrase"],"ans":0,"e":"Both block cellular oxygen utilisation (histotoxic hypoxia)."},
+  {"c":"asphyxiant","q":"A \"simple asphyxiant\" causes harm by:","o":["Displacing oxygen without direct toxicity","Blocking cytochrome oxidase","Binding haemoglobin","Oxidising haemoglobin"],"ans":0,"e":"Gases like CO2, nitrogen and methane simply lower ambient oxygen."},
+  {"c":"asphyxiant","q":"Cherry-red post-mortem lividity is most classically due to:","o":["Carbon monoxide","Hydrogen sulphide","Methane","Ammonia"],"ans":0,"e":"Carboxyhaemoglobin imparts a cherry-red colour (cyanide can also look bright red)."},
+  {"c":"asphyxiant","q":"Smoke-inhalation victims may have combined poisoning by:","o":["Carbon monoxide and cyanide","Arsenic and lead","Mercury and thallium","Iron and copper"],"ans":0,"e":"House fires generate both CO and hydrogen cyanide."},
+  {"c":"asphyxiant","q":"Chocolate-brown arterial blood at autopsy suggests:","o":["Methaemoglobinaemia","Carbon monoxide","Cyanide","Hydrogen sulphide"],"ans":0,"e":"Ferric (met) haemoglobin gives blood a chocolate-brown hue."},
+  {"c":"asphyxiant","q":"Sodium thiosulphate aids cyanide detoxification by providing:","o":["Sulphur to form thiocyanate","Iron to bind cyanide","Cobalt to chelate","Oxygen to tissues"],"ans":0,"e":"Rhodanese uses sulphur donors to convert cyanide to excretable thiocyanate."},
+  {"c":"asphyxiant","q":"Chlorine gas exposure characteristically causes:","o":["Immediate airway and mucosal irritation","Delayed hepatic failure","Alopecia","Cherry-red skin"],"ans":0,"e":"Chlorine is highly water-soluble, producing rapid upper-airway irritation."},
+  {"c":"asphyxiant","q":"The war gas whose antidote is BAL (dimercaprol) is:","o":["Lewisite","Phosgene","Chlorine","Sarin"],"ans":0,"e":"Lewisite is an arsenical vesicant; BAL chelates its arsenic."},
+  {"c":"agri","q":"Organophosphates are absorbed by:","o":["Skin, inhalation and ingestion","Ingestion only","Skin only","Inhalation only"],"ans":0,"e":"All routes are important; dermal absorption mandates decontamination."},
+  {"c":"agri","q":"The laboratory confirmation of OP poisoning is:","o":["Reduced plasma / RBC cholinesterase","Raised amylase","Low potassium","Raised troponin"],"ans":0,"e":"Cholinesterase activity falls; RBC (true) esterase best reflects synaptic effect."},
+  {"c":"agri","q":"The nicotinic effects of organophosphate poisoning include:","o":["Fasciculations and muscle weakness","Miosis and salivation","Bronchorrhoea","Lacrimation"],"ans":0,"e":"Nicotinic overactivity causes fasciculations, weakness and tachycardia."},
+  {"c":"agri","q":"Pralidoxime relieves OP poisoning by:","o":["Reactivating phosphorylated cholinesterase","Blocking muscarinic receptors","Enhancing GABA","Chelating the OP"],"ans":0,"e":"It removes the OP from the enzyme if given before \"ageing\"."},
+  {"c":"agri","q":"The chief cause of death in organophosphate poisoning is:","o":["Respiratory failure","Renal failure","Hepatic coma","Cardiac rupture"],"ans":0,"e":"Bronchorrhoea, bronchospasm, muscle weakness and central depression cause it."},
+  {"c":"agri","q":"The end-point of atropinisation is judged by:","o":["Drying of chest secretions and clear lungs","Pupil dilatation","A target heart rate of 60","Salivation"],"ans":0,"e":"Titrate to dry the chest; pupils are an unreliable guide."},
+  {"c":"agri","q":"Oximes are traditionally NOT required for poisoning by:","o":["Carbamates","Parathion","Malathion","Chlorpyrifos"],"ans":0,"e":"Carbamate–enzyme binding is reversible and self-hydrolysing."},
+  {"c":"agri","q":"Which class is highly lipophilic, environmentally persistent and bio-accumulates?","o":["Organochlorines","Organophosphates","Carbamates","Pyrethroids"],"ans":0,"e":"DDT and related compounds persist and concentrate up the food chain."},
+  {"c":"agri","q":"In organochlorine poisoning, which drug is best AVOIDED (arrhythmia risk)?","o":["Adrenaline","Diazepam","Atropine","Oxygen"],"ans":0,"e":"The sensitised myocardium may fibrillate with catecholamines."},
+  {"c":"agri","q":"Aluminium phosphide tablets are used as a:","o":["Grain fumigant (\"rice/wheat tablet\")","Herbicide","Fungicide","Growth regulator"],"ans":0,"e":"They release phosphine to protect stored grain, and are a common suicidal poison."},
+  {"c":"agri","q":"Aluminium phosphide poisoning is characterised by:","o":["Refractory hypotension and metabolic acidosis","Hypertension","Alopecia","Blindness"],"ans":0,"e":"Phosphine causes profound cardiovascular collapse; there is no antidote."},
+  {"c":"agri","q":"Which adjunct is used in aluminium phosphide poisoning for arrhythmias?","o":["Magnesium sulphate","Calcium gluconate","Potassium chloride","Digoxin"],"ans":0,"e":"Magnesium and aggressive supportive care are used, though prognosis is poor."},
+  {"c":"agri","q":"Paraquat is especially lethal because it targets the:","o":["Lungs (progressive fibrosis)","Liver alone","Kidneys alone","Bone marrow"],"ans":0,"e":"It concentrates in alveolar cells generating free radicals and fibrosis."},
+  {"c":"agri","q":"Oxygen is withheld in paraquat poisoning because it:","o":["Worsens free-radical lung damage","Is ineffective","Causes seizures","Raises potassium"],"ans":0,"e":"Supplemental O2 accelerates oxidative lung injury unless SpO2 is critical."},
+  {"c":"agri","q":"Diquat differs from paraquat in causing:","o":["Less lung fibrosis but more CNS/GI toxicity","Only lung fibrosis","No toxicity","Cyanide release"],"ans":0,"e":"Diquat spares the lung relatively but affects the gut, kidneys and brain."},
+  {"c":"agri","q":"\"Superwarfarin\" rodenticides require prolonged treatment with:","o":["Vitamin K1","Protamine","Vitamin C","Calcium"],"ans":0,"e":"Their long half-life may need weeks of oral vitamin K."},
+  {"c":"agri","q":"DDT stands for:","o":["Dichlorodiphenyltrichloroethane","Diethyl dithio-triazine","Dichloro-dimethyl-toluene","Dinitro-diphenyl-thiophosphate"],"ans":0,"e":"An organochlorine insecticide, now widely banned due to persistence."},
+  {"c":"agri","q":"Which is an organophosphate insecticide?","o":["Malathion","Carbaryl","Lindane","Cypermethrin"],"ans":0,"e":"Malathion, parathion, chlorpyrifos and dichlorvos are organophosphates."},
+  {"c":"agri","q":"Which is a carbamate insecticide?","o":["Propoxur","Malathion","DDT","Endosulfan"],"ans":0,"e":"Carbaryl, propoxur and aldicarb are carbamates (reversible cholinesterase inhibitors)."},
+  {"c":"agri","q":"\"Intermediate syndrome\" after OP poisoning classically involves:","o":["Proximal limb, neck and respiratory muscle weakness","Distal sensory loss","Convulsions","Alopecia"],"ans":0,"e":"It appears 1–4 days later with proximal and respiratory weakness."},
+  {"c":"agri","q":"OP-induced delayed neuropathy (OPIDN) presents as:","o":["Distal sensorimotor neuropathy weeks later","Immediate paralysis","Acute psychosis","Renal failure"],"ans":0,"e":"It follows inhibition of neuropathy target esterase, weeks after exposure."},
+  {"c":"agri","q":"Endosulfan, endrin and lindane are:","o":["Organochlorines (CNS stimulants)","Organophosphates","Carbamates","Pyrethroids"],"ans":0,"e":"Organochlorines cause hyperexcitability and convulsions."},
+  {"c":"agri","q":"Glyphosate (a common herbicide) toxicity is largely attributed to its:","o":["Surfactant, causing GI corrosion and shock","Cholinesterase inhibition","Phosphine release","Cyanide release"],"ans":0,"e":"The formulation surfactant drives GI injury, hypotension and organ failure."},
+  {"c":"agri","q":"A bedside test for phosphine on breath/gastric aspirate uses:","o":["Silver nitrate paper","Litmus paper","Starch-iodide only","Guaiac reagent"],"ans":0,"e":"Phosphine blackens silver-nitrate-impregnated paper."},
+  {"c":"agri","q":"Which pesticide class carries the HIGHEST case-fatality with no antidote?","o":["Aluminium phosphide","Pyrethroids","Carbamates","Neonicotinoids"],"ans":0,"e":"Aluminium phosphide (phosphine) has a very high mortality and no antidote."},
+  {"c":"agri","q":"The classic muscarinic mnemonic for OP toxicity is:","o":["DUMBELS / SLUDGE","MUDPILES","ABCDE","FAST"],"ans":0,"e":"Diarrhoea, Urination, Miosis, Bradycardia, Emesis, Lacrimation, Salivation."},
+  {"c":"agri","q":"The breath odour in organophosphate and phosphide poisoning is:","o":["Garlic-like","Bitter almond","Rotten egg","Fruity"],"ans":0,"e":"A garlic/petroleum odour is common to OP solvents and phosphine."},
+  {"c":"agri","q":"Neonicotinoid insecticides act on:","o":["Insect nicotinic receptors (low mammalian toxicity)","Human cholinesterase strongly","Sodium channels lethally","Cytochrome oxidase"],"ans":0,"e":"Selectivity for insect receptors gives relatively low human toxicity."},
+  {"c":"agri","q":"The commonest agent of fatal self-poisoning in rural India is:","o":["Organophosphate / aluminium phosphide pesticides","Paracetamol","Opioids","Corrosives"],"ans":0,"e":"Agricultural pesticides dominate rural suicidal poisoning statistics."},
+  {"c":"agri","q":"Barium carbonate rodenticide poisoning classically causes:","o":["Hypokalaemia with paralysis","Hyperkalaemia","Alopecia","Cherry-red skin"],"ans":0,"e":"Barium drives potassium intracellularly, causing profound hypokalaemic paralysis."},
+  {"c":"agri","q":"Which decontamination is traditionally used in aluminium phosphide poisoning?","o":["KMnO4 and coconut-oil lavage","Sodium bicarbonate","Egg white","Milk of magnesia"],"ans":0,"e":"Permanganate oxidises phosphine; coconut oil retards its release."},
+  {"c":"agri","q":"\"Type II\" pyrethroids (containing a cyano group) characteristically cause:","o":["Choreoathetosis and salivation","Pure paraesthesia only","Cyanosis","Alopecia"],"ans":0,"e":"Cyano-pyrethroids (e.g., deltamethrin) can cause the \"CS syndrome\"."},
+  {"c":"agri","q":"Pralidoxime must be given early because the OP-enzyme complex undergoes:","o":["\"Ageing\" (becomes irreversible)","Spontaneous reactivation","Renal clearance","Hydrolysis"],"ans":0,"e":"Once aged, the phosphorylated enzyme can no longer be reactivated."},
+  {"c":"agri","q":"Which best distinguishes carbamate from OP poisoning clinically?","o":["Shorter, self-limiting course","More severe CNS coma always","Permanent paralysis","No cholinergic features"],"ans":0,"e":"Carbamate effects are reversible and generally milder and briefer."},
+  {"c":"agri","q":"Zinc phosphide and aluminium phosphide share toxicity through:","o":["Phosphine gas liberation","Cyanide release","Cholinesterase inhibition","Methaemoglobinaemia"],"ans":0,"e":"Both release phosphine on contact with moisture/acid."},
+  {"c":"agri","q":"A herbicide of the \"phenoxy\" group is:","o":["2,4-D","Paraquat","Glyphosate","Atrazine"],"ans":0,"e":"2,4-D (a chlorophenoxy herbicide) causes muscle and metabolic toxicity."},
+  {"c":"agri","q":"The adsorbent given in paraquat ingestion is:","o":["Fuller’s earth or activated charcoal","Milk","Starch","Egg albumin"],"ans":0,"e":"Gut adsorbents bind paraquat; early haemoperfusion may help."},
+  {"c":"agri","q":"DDT and other organochlorines were largely banned mainly because they are:","o":["Persistent and bio-accumulative","Corrosive","Explosive","Radioactive"],"ans":0,"e":"Environmental persistence and food-chain accumulation led to bans."},
+  {"c":"agri","q":"Which sign is UNRELIABLE for titrating atropine in OP poisoning?","o":["Pupil size","Chest secretions","Heart rate","Axillary sweat"],"ans":0,"e":"Pupils may stay small; use secretions, HR and dry skin instead."},
+  {"c":"agri","q":"The three groups of anticholinesterase-type / cellular pesticides commonly examined are:","o":["Organophosphates, carbamates and phosphides","Only organophosphates","Only pyrethroids","Only herbicides"],"ans":0,"e":"OPs and carbamates inhibit cholinesterase; phosphides are cellular poisons."},
+  {"c":"agri","q":"Death in paraquat poisoning is typically:","o":["Delayed, over days, from lung fibrosis","Instant cardiac arrest","From acute haemolysis","From convulsions"],"ans":0,"e":"Progressive pulmonary fibrosis causes death after several days."},
+  {"c":"irritant","q":"Chronic arsenic exposure causes which skin changes?","o":["Hyperkeratosis of palms/soles and hyperpigmentation","Blue gum line","Silver-grey skin","Cherry-red flush"],"ans":0,"e":"Palmoplantar keratosis, \"raindrop\" pigmentation and later skin cancers occur."},
+  {"c":"irritant","q":"Arsenic is medico-legally valuable in exhumation because it is deposited in:","o":["Hair, nails and bone","Only blood","Only urine","Only liver"],"ans":0,"e":"Long-lived deposits in keratin and bone allow detection long after death."},
+  {"c":"irritant","q":"The breath odour in acute arsenic poisoning is:","o":["Garlic-like","Bitter almond","Rotten egg","Fruity"],"ans":0,"e":"A garlicky odour accompanies vomiting and rice-water stools."},
+  {"c":"irritant","q":"Arsenic is an established carcinogen of the:","o":["Skin, lung and bladder","Brain","Bone marrow only","Thyroid only"],"ans":0,"e":"Chronic arsenicosis raises risk of skin, lung and urinary bladder cancer."},
+  {"c":"irritant","q":"Aldrich-Mees lines are:","o":["Transverse white bands on nails (arsenic/thallium)","Blue gum lines","Skin ulcers","Retinal deposits"],"ans":0,"e":"These transverse leuconychial bands follow arsenic (and thallium) poisoning."},
+  {"c":"irritant","q":"Lead colic is typically accompanied by:","o":["Constipation","Watery diarrhoea","Haematemesis","Steatorrhoea"],"ans":0,"e":"Painter’s colic presents with severe abdominal pain and constipation."},
+  {"c":"irritant","q":"In children, chronic lead poisoning classically shows on X-ray:","o":["Dense metaphyseal \"lead lines\"","Bone cysts","Periosteal reaction","Osteoporosis"],"ans":0,"e":"Lead deposits produce dense transverse metaphyseal bands in growing bone."},
+  {"c":"irritant","q":"Lead poisoning raises urinary excretion of:","o":["Delta-aminolaevulinic acid and coproporphyrin","Homovanillic acid","Oxalate","Urobilinogen"],"ans":0,"e":"Blocked haem synthesis elevates ALA and coproporphyrin III."},
+  {"c":"irritant","q":"Which are recognised sources of lead poisoning?","o":["Old paint, batteries, surma/kohl and some ayurvedic medicines","Aluminium foil","Stainless steel","Glass"],"ans":0,"e":"Paint, battery work, cosmetics (surma) and adulterated remedies are classic sources."},
+  {"c":"irritant","q":"The most severe manifestation of lead poisoning, commoner in children, is:","o":["Lead encephalopathy","Wrist drop","Blue gum line","Colic"],"ans":0,"e":"Encephalopathy (seizures, coma, cerebral oedema) carries high mortality."},
+  {"c":"irritant","q":"Acute mercuric chloride poisoning primarily damages the:","o":["Kidneys (acute tubular necrosis)","Lungs","Heart","Pancreas"],"ans":0,"e":"It is corrosive to the gut and causes ATN with oliguria."},
+  {"c":"irritant","q":"\"Pink disease\" (acrodynia) from mercury is seen in:","o":["Children","Elderly men","Pregnant women only","Miners"],"ans":0,"e":"Acrodynia causes painful, pink, peeling hands and feet in children."},
+  {"c":"irritant","q":"Inhaled elemental mercury vapour chiefly injures the:","o":["Lungs and CNS","Kidneys only","Skin","Liver"],"ans":0,"e":"Vapour causes chemical pneumonitis and neuropsychiatric effects."},
+  {"c":"irritant","q":"BAL should be AVOIDED in poisoning by which mercury form?","o":["Methylmercury (organic)","Mercuric chloride","Mercury vapour","Mercurous salts"],"ans":0,"e":"BAL may redistribute methylmercury to the brain; use succimer (DMSA) instead."},
+  {"c":"irritant","q":"Copper sulphate poisoning can cause which haematological effect?","o":["Intravascular haemolysis and methaemoglobinaemia","Aplastic anaemia only","Polycythaemia","No effect"],"ans":0,"e":"Copper triggers haemolysis, methaemoglobinaemia and hepatorenal injury."},
+  {"c":"irritant","q":"Iron poisoning has a deceptive phase in which:","o":["Apparent recovery precedes shock and hepatic failure","Symptoms are absent throughout","Death is instantaneous","Only skin is affected"],"ans":0,"e":"Stage 2 (latent, 6–24 h) precedes stage 3 shock/metabolic collapse."},
+  {"c":"irritant","q":"Iron tablets are notable on abdominal X-ray because they are:","o":["Radio-opaque","Radiolucent","Fluorescent","Magnetic only"],"ans":0,"e":"Radio-opaque tablets can guide whole-bowel irrigation."},
+  {"c":"irritant","q":"Acute cadmium fume inhalation (welding/smelting) causes:","o":["Chemical pneumonitis / metal-fume fever","Blue gums","Alopecia","Cherry-red skin"],"ans":0,"e":"Cadmium fumes cause acute pneumonitis; chronic exposure gives itai-itai and renal damage."},
+  {"c":"irritant","q":"\"Metal fume fever\" (flu-like illness in welders) is classically due to:","o":["Zinc oxide fumes","Lead","Arsenic","Thallium"],"ans":0,"e":"Freshly formed zinc oxide fume causes a self-limiting febrile illness."},
+  {"c":"irritant","q":"Antimony (tartar emetic) poisoning most resembles:","o":["Arsenic","Lead","Mercury","Iron"],"ans":0,"e":"Antimony causes arsenic-like vomiting and GI/cardiac effects."},
+  {"c":"irritant","q":"Chronic bismuth toxicity is associated with:","o":["Encephalopathy and a black gum line","Wrist drop","Blue vision","Alopecia"],"ans":0,"e":"Bismuth causes a reversible encephalopathy and gingival pigmentation."},
+  {"c":"irritant","q":"Chromium (hexavalent) exposure classically causes:","o":["Nasal septal perforation, dermatitis and lung cancer","Blue gums","Alopecia","Cherry-red skin"],"ans":0,"e":"Chromate workers develop septal ulcers, \"chrome holes\" and respiratory cancer."},
+  {"c":"irritant","q":"Cobalt toxicity (e.g., \"beer-drinker’s\") targets the:","o":["Heart (cardiomyopathy)","Kidney only","Skin only","Retina"],"ans":0,"e":"Cobalt can cause a dilated cardiomyopathy and thyroid effects."},
+  {"c":"irritant","q":"Selenium poisoning characteristically causes:","o":["Garlic breath with hair and nail loss","Blue gum line","Cherry-red skin","Wrist drop"],"ans":0,"e":"Selenosis features a garlicky odour, brittle hair/nails and dermatitis."},
+  {"c":"irritant","q":"Aluminium accumulation in dialysis patients can cause:","o":["Encephalopathy (\"dialysis dementia\")","Wrist drop","Blue gums","Alopecia"],"ans":0,"e":"Aluminium toxicity causes encephalopathy and osteomalacia in renal failure."},
+  {"c":"irritant","q":"Chronic manganese poisoning (miners/welders) produces:","o":["Parkinsonism","Cherry-red skin","Rice-water stools","Blue gums"],"ans":0,"e":"Manganism resembles Parkinson’s with extrapyramidal features and psychiatric change."},
+  {"c":"irritant","q":"The specific antidote for thallium poisoning is:","o":["Prussian blue","BAL","Desferrioxamine","Calcium"],"ans":0,"e":"Prussian blue binds thallium in the gut, enhancing faecal excretion."},
+  {"c":"irritant","q":"Arsine gas is unique among arsenic exposures in causing:","o":["Massive intravascular haemolysis and renal failure","Local corrosion","Constipation","Alopecia"],"ans":0,"e":"Arsine is a potent haemolysin (haemoglobinuria, jaundice, ATN)."},
+  {"c":"irritant","q":"Basophilic stippling of red cells is a hallmark of poisoning by:","o":["Lead","Copper","Iron","Selenium"],"ans":0,"e":"Impaired haem synthesis and RNA aggregation give stippled erythrocytes."},
+  {"c":"irritant","q":"The classical antidote given for acute iron overdose is:","o":["Desferrioxamine","Penicillamine","BAL","Prussian blue"],"ans":0,"e":"Desferrioxamine chelates free iron, forming excretable ferrioxamine."},
+  {"c":"irritant","q":"Chronic fluoride ingestion causes:","o":["Dental and skeletal fluorosis","Blue gums","Alopecia","Cherry-red skin"],"ans":0,"e":"Endemic fluorosis mottles teeth and causes skeletal changes; acute fluoride binds calcium."},
+  {"c":"irritant","q":"Yellow phosphorus poisoning shows a characteristic:","o":["Garlic odour with luminous vomit and \"smoking stool\"","Blue gum line","Cherry-red skin","Alopecia"],"ans":0,"e":"Luminous, garlicky vomit/stool with two-stage hepatotoxicity is classic."},
+  {"c":"irritant","q":"The two-stage course of phosphorus poisoning involves:","o":["GI phase, a symptom-free interval, then hepatic failure","Immediate death only","Renal stones then recovery","Alopecia then coma"],"ans":0,"e":"A deceptive latent period separates the GI and hepatotoxic phases."},
+  {"c":"irritant","q":"Nickel carbonyl exposure is particularly hazardous to the:","o":["Lungs","Kidneys only","Skin only","Retina"],"ans":0,"e":"Nickel carbonyl causes delayed chemical pneumonitis; nickel salts cause dermatitis."},
+  {"c":"irritant","q":"\"Blind staggers\" and hoof/hair loss in livestock indicate poisoning by:","o":["Selenium","Lead","Arsenic","Mercury"],"ans":0,"e":"Selenium toxicosis affects grazing animals in seleniferous soils."},
+  {"c":"irritant","q":"The gum discolouration in chronic lead poisoning is called the:","o":["Burtonian line","Aldrich-Mees line","Bismuth line","Copper line"],"ans":0,"e":"A blue-grey sulphide deposit at the gum margin (Burton’s line)."},
+  {"c":"irritant","q":"Silver toxicity (chronic) produces:","o":["Argyria (slate-grey skin)","Blue gums","Alopecia","Rice-water stools"],"ans":0,"e":"Silver deposition causes a permanent grey-blue skin discolouration."},
+  {"c":"irritant","q":"Acute arsenic poisoning classically mimics which illness?","o":["Cholera / gastroenteritis","Meningitis","Myocardial infarction","Diabetic coma"],"ans":0,"e":"Profuse vomiting and rice-water stools resemble cholera."},
+  {"c":"irritant","q":"Abrin (abrus) and ricin (castor) are both classified as:","o":["Toxalbumins (plant lectins)","Alkaloids","Glycosides","Resins"],"ans":0,"e":"Both are toxalbumins that agglutinate RBCs and block protein synthesis."},
+  {"c":"irritant","q":"Abrus precatorius seeds are fashioned into \"sui\" needles chiefly to:","o":["Kill cattle for their hides","Poison wells","Flavour food","Treat wounds"],"ans":0,"e":"A classic method of cattle poisoning; local necrosis develops at puncture sites."},
+  {"c":"irritant","q":"Croton oil (Croton tiglium) acts as a:","o":["Drastic purgative and skin vesicant","Cardiac glycoside","CNS depressant","Neurotoxin"],"ans":0,"e":"A violent irritant purgative; the oil also blisters skin."},
+  {"c":"irritant","q":"Calotropis (madar) latex is used medico-legally to:","o":["Feign eye injury / induce abortion / poison cattle","Sedate victims","Cause corrosion of gut only","Treat burns"],"ans":0,"e":"The acrid latex irritates the eye and is used as an abortifacient and cattle poison."},
+  {"c":"irritant","q":"Fabricated bruises from marking nut juice are recognised by their:","o":["Irregular, non-anatomical, \"running\" margins","Sharp linear edges","Circular uniform shape","Absence of colour"],"ans":0,"e":"Chemically produced lesions do not follow the pattern of true blunt trauma."},
+  {"c":"irritant","q":"Plumbago (chitrak) root is used chiefly as a/an:","o":["Irritant abortifacient","Cardiac tonic","Sedative","Corrosive acid"],"ans":0,"e":"Its acrid root paste is inserted to procure criminal abortion."},
+  {"c":"irritant","q":"Ergotism (\"St Anthony’s fire\") from Claviceps causes:","o":["Vasospasm, gangrene and abortion","Cyanide poisoning","Cholinergic crisis","Alopecia"],"ans":0,"e":"Ergot alkaloids constrict vessels (gangrene) and stimulate the uterus."},
+  {"c":"irritant","q":"Colocynth (\"bitter apple\") acts as a:","o":["Drastic purgative and abortifacient","Cardiac glycoside","Neurotoxin","Corrosive"],"ans":0,"e":"A powerful irritant purgative used to procure abortion."},
+  {"c":"irritant","q":"Adulteration of mustard oil with Argemone mexicana seeds causes:","o":["Epidemic dropsy","Lathyrism","Fluorosis","Beri-beri"],"ans":0,"e":"Sanguinarine causes oedema, glaucoma and cardiac failure (epidemic dropsy)."},
+  {"c":"irritant","q":"Lathyrism, causing spastic paraplegia, results from prolonged intake of:","o":["Lathyrus sativus (khesari dal)","Cassava","Argemone oil","Rye ergot"],"ans":0,"e":"The neurotoxin BOAA in khesari dal causes irreversible spastic paraparesis."},
+  {"c":"irritant","q":"Cassava and bitter almonds can cause poisoning because they contain:","o":["Cyanogenic glycosides","Toxalbumins","Cardiac glycosides","Oxalates only"],"ans":0,"e":"Amygdalin/linamarin release cyanide on hydrolysis (konzo with cassava)."},
+  {"c":"irritant","q":"Ricin causes cell death by:","o":["Inhibiting ribosomal protein synthesis","Blocking cholinesterase","Chelating calcium","Opening sodium channels"],"ans":0,"e":"The A-chain depurinates 28S rRNA, halting protein synthesis."},
+  {"c":"irritant","q":"Capsicum’s irritant principle is:","o":["Capsaicin","Ricin","Croton oil","Sanguinarine"],"ans":0,"e":"Capsaicin is a potent mucous-membrane irritant and lacrimator."},
+  {"c":"irritant","q":"Cobra venom (neurotoxic) produces which early clinical sign?","o":["Ptosis and bulbar weakness","Massive local swelling","Spontaneous bleeding","Alopecia"],"ans":0,"e":"Descending neuromuscular paralysis (ptosis first) with little local reaction."},
+  {"c":"irritant","q":"Krait bites are dangerous because they are often:","o":["Painless with delayed morning respiratory paralysis","Immediately agonising","Purely local","Non-venomous"],"ans":0,"e":"Nocturnal bites may go unnoticed, presenting as early-morning paralysis."},
+  {"c":"irritant","q":"Russell’s viper envenomation commonly causes:","o":["Coagulopathy, bleeding and acute kidney injury","Pure neuromuscular paralysis","Alopecia","Cherry-red skin"],"ans":0,"e":"Vasculotoxic venom causes DIC-like coagulopathy and AKI."},
+  {"c":"irritant","q":"The saw-scaled viper (Echis) makes a warning sound by:","o":["Rubbing its serrated scales together","Rattling its tail","Hissing loudly","Hooding up"],"ans":0,"e":"It produces a rasping/sizzling noise; its venom is vasculotoxic."},
+  {"c":"irritant","q":"Sea-snake envenomation is chiefly:","o":["Myotoxic (rhabdomyolysis)","Purely neurotoxic","Vasculotoxic","Cytotoxic local"],"ans":0,"e":"Muscle breakdown causes myoglobinuria and renal failure."},
+  {"c":"irritant","q":"The bedside test to monitor viper-bite coagulopathy is the:","o":["20-minute whole blood clotting test","Bleeding time","Platelet count only","ESR"],"ans":0,"e":"Non-clotting blood at 20 minutes indicates venom-induced coagulopathy."},
+  {"c":"irritant","q":"Polyvalent anti-snake venom is indicated when there is:","o":["Systemic envenomation or non-clotting blood","Any bite mark","Local pain only","A dry bite"],"ans":0,"e":"ASV is given for systemic signs or coagulopathy, not for every bite."},
+  {"c":"irritant","q":"An acute adverse reaction to anti-snake venom is:","o":["Anaphylaxis","Alopecia","Blue gums","Hypertension crisis only"],"ans":0,"e":"ASV can cause anaphylactoid reactions and later serum sickness."},
+  {"c":"irritant","q":"First aid for snakebite includes:","o":["Immobilisation and rapid transport (no incision/tourniquet)","Tight arterial tourniquet","Incision and suction","Electric shock"],"ans":0,"e":"Reassure, immobilise the limb and get antivenom; avoid harmful traditional methods."},
+  {"c":"irritant","q":"A \"dry bite\" means:","o":["A bite with no venom injected","A bite from a dead snake","A bite on dry skin","A non-poisonous species"],"ans":0,"e":"Venomous snakes may bite without envenomation; observe before giving ASV."},
+  {"c":"irritant","q":"Severe Indian red scorpion sting is best treated with:","o":["Prazosin (and scorpion antivenom)","Neostigmine","Atropine alone","Adrenaline infusion"],"ans":0,"e":"Prazosin counters the catecholamine storm and pulmonary oedema."},
+  {"c":"irritant","q":"The chief acute danger of bee/wasp stings is:","o":["Anaphylaxis","Coagulopathy","Cyanide poisoning","Renal stones"],"ans":0,"e":"Hymenoptera venom can cause fatal anaphylaxis; massive stings cause haemolysis/AKI."},
+  {"c":"irritant","q":"Black-widow spider envenomation (latrodectism) chiefly causes:","o":["Severe muscle cramps and rigidity","Local necrosis only","Coagulopathy","Alopecia"],"ans":0,"e":"Alpha-latrotoxin triggers neurotransmitter release, causing painful spasms."},
+  {"c":"irritant","q":"Brown-recluse spider bites are noted for:","o":["Local dermonecrosis","Neuromuscular paralysis","Coagulopathy","Cardiac arrest"],"ans":0,"e":"Loxoscelism produces a necrotic ulcer at the bite site."},
+  {"c":"irritant","q":"Cantharidin (from blister beetles) characteristically causes:","o":["Skin vesication, priapism and haemorrhagic cystitis","Neuromuscular paralysis","Cyanosis","Alopecia"],"ans":0,"e":"A potent vesicant historically abused as an aphrodisiac (\"Spanish fly\")."},
+  {"c":"irritant","q":"Box-jellyfish stings cause harm via:","o":["Nematocyst-injected venom (cardiotoxic)","Cyanide","Cholinesterase inhibition","Radiation"],"ans":0,"e":"Cnidarian nematocysts inject venom causing severe pain and cardiotoxicity."},
+  {"c":"irritant","q":"Stingray injuries are dangerous because of:","o":["A venomous barbed spine causing deep envenomated wounds","Cyanide","Neurotoxin only","Radiation"],"ans":0,"e":"The tail spine delivers venom and causes a penetrating, often infected wound."},
+  {"c":"irritant","q":"The venom type of the common cobra is:","o":["Neurotoxic","Vasculotoxic","Myotoxic","Cytotoxic only"],"ans":0,"e":"Elapid (colubrine) venom is predominantly neurotoxic."},
+  {"c":"irritant","q":"Neostigmine (with atropine) may help in envenomation by:","o":["Neurotoxic snakes (cobra)","Vipers","Sea snakes","Scorpions"],"ans":0,"e":"Anticholinesterase can improve post-synaptic neuromuscular block; ASV is definitive."},
+  {"c":"irritant","q":"Which plant toxin is a cyanogenic source relevant to konzo?","o":["Cassava (linamarin)","Castor (ricin)","Abrus (abrin)","Croton oil"],"ans":0,"e":"Poorly processed bitter cassava causes cyanide exposure and konzo."},
+  {"c":"irritant","q":"Which is a toxalbumin-containing seed used for cattle poisoning?","o":["Abrus precatorius","Datura","Nux vomica","Aconite"],"ans":0,"e":"Abrin-containing abrus seeds are used as \"sui\" for cattle."},
+  {"c":"irritant","q":"The classic feature distinguishing viper from cobra envenomation is:","o":["Prominent local swelling and bleeding","Ptosis","Pinpoint pupils","Painless bite"],"ans":0,"e":"Viperine bites cause marked local injury and coagulopathy, unlike neurotoxic cobra bites."},
+  {"c":"irritant","q":"Marking nut (bhilawa) belongs to which botanical family relevance for dermatitis?","o":["Anacardiaceae (like cashew/poison ivy)","Solanaceae","Apocynaceae","Fabaceae"],"ans":0,"e":"Anacardiaceae oils (urushiol-like) cause vesicant contact dermatitis."},
+  {"c":"irritant","q":"Which snake venom characteristically causes myoglobinuria and renal failure?","o":["Sea snake","Cobra","Krait","Green pit viper"],"ans":0,"e":"Sea-snake myotoxin causes rhabdomyolysis with myoglobinuric renal failure."},
+  {"c":"irritant","q":"Epidemic dropsy outbreaks are traced to:","o":["Argemone-adulterated mustard oil","Contaminated water","Cassava flour","Ergot-infected rye"],"ans":0,"e":"Argemone mexicana oil (sanguinarine) adulterating mustard oil causes it."},
+  {"c":"neurotic","q":"The classic triad of opioid overdose is:","o":["Coma, pinpoint pupils and respiratory depression","Convulsions, fever, dilated pupils","Salivation, lacrimation, diarrhoea","Tremor, sweating, hallucination"],"ans":0,"e":"Depressed consciousness, miosis and slow shallow breathing typify opioid toxicity."},
+  {"c":"neurotic","q":"The pharmacologically active metabolite of morphine is:","o":["Morphine-6-glucuronide","Normorphine","Codeine","Nalorphine"],"ans":0,"e":"M6G contributes significantly to morphine’s analgesia and toxicity."},
+  {"c":"neurotic","q":"Naloxone in an opioid-dependent patient may precipitate:","o":["Acute withdrawal","Seizures from the drug","Methaemoglobinaemia","Hyperkalaemia"],"ans":0,"e":"Sudden antagonism triggers withdrawal; titrate to restore breathing."},
+  {"c":"neurotic","q":"Fentanyl is dangerous chiefly because it is:","o":["Far more potent than morphine (~100x)","A weak partial agonist","Non-lethal","Only topical"],"ans":0,"e":"Its high potency makes tiny amounts lethal, causing rapid apnoea."},
+  {"c":"neurotic","q":"Tramadol overdose is distinctive for causing:","o":["Seizures and serotonin toxicity","Pure miosis","Cyanosis","Alopecia"],"ans":0,"e":"Tramadol lowers seizure threshold and has serotonergic activity."},
+  {"c":"neurotic","q":"Methadone toxicity is associated with which ECG risk?","o":["QT prolongation / torsades","Wide QRS from sodium block","Short QT","Delta waves"],"ans":0,"e":"Methadone prolongs QT and is long-acting, so monitoring must be prolonged."},
+  {"c":"neurotic","q":"Codeine produces analgesia mainly after conversion to:","o":["Morphine (via CYP2D6)","Fentanyl","Heroin","Naloxone"],"ans":0,"e":"Ultra-rapid CYP2D6 metabolisers may develop unexpected morphine toxicity."},
+  {"c":"neurotic","q":"Pethidine (meperidine) overdose can cause seizures via its metabolite:","o":["Normeperidine","Morphine","M6G","Nor-codeine"],"ans":0,"e":"Normeperidine is a CNS stimulant that lowers the seizure threshold."},
+  {"c":"neurotic","q":"A \"body packer\" differs from a \"body stuffer\" in that the packer:","o":["Carefully conceals large well-wrapped quantities","Hastily swallows small amounts to hide evidence","Only inhales the drug","Injects the drug"],"ans":0,"e":"Packers smuggle many robust packets; stuffers swallow poorly-wrapped drug to evade arrest."},
+  {"c":"neurotic","q":"Buprenorphine is best described as a:","o":["Partial opioid agonist","Full antagonist","Pure agonist","Non-opioid"],"ans":0,"e":"Its partial agonism gives a ceiling effect and is used in dependence therapy."},
+  {"c":"neurotic","q":"The naturally occurring alkaloids of opium include:","o":["Morphine, codeine, thebaine, papaverine","Cocaine and atropine","Nicotine and coniine","Strychnine and brucine"],"ans":0,"e":"Opium contains phenanthrene (morphine, codeine, thebaine) and benzylisoquinoline alkaloids."},
+  {"c":"neurotic","q":"Opioid withdrawal (though rarely fatal) features:","o":["Lacrimation, rhinorrhoea, piloerection, cramps","Convulsions and coma","Cherry-red skin","Pinpoint pupils"],"ans":0,"e":"A flu-like autonomic syndrome with mydriasis, yawning and diarrhoea."},
+  {"c":"neurotic","q":"Barbiturates are classified by duration of action; phenobarbital is:","o":["Long-acting","Ultra-short-acting","Only an inhalational agent","A stimulant"],"ans":0,"e":"Long-acting phenobarbital is amenable to urinary alkalinisation."},
+  {"c":"neurotic","q":"Elimination of phenobarbital can be enhanced by:","o":["Urinary alkalinisation","Urinary acidification","Vitamin K","Atropine"],"ans":0,"e":"Alkaline urine ion-traps this weak acid, speeding excretion."},
+  {"c":"neurotic","q":"Barbiturate coma classically produces which skin sign?","o":["Bullae over pressure points","Cherry-red lividity","Blue gum line","Argyria"],"ans":0,"e":"\"Barbiturate blisters\" appear over pressure areas."},
+  {"c":"neurotic","q":"The benzodiazepine antidote is:","o":["Flumazenil","Naloxone","Physostigmine","Fomepizole"],"ans":0,"e":"Flumazenil competitively blocks the benzodiazepine site (use cautiously)."},
+  {"c":"neurotic","q":"Benzodiazepine overdose is usually mild alone but dangerous when combined with:","o":["Alcohol or opioids","Vitamin C","Antacids","Iron"],"ans":0,"e":"Additive CNS/respiratory depression makes mixed overdose lethal."},
+  {"c":"neurotic","q":"Flunitrazepam and GHB are notorious as:","o":["\"Date-rape\" drugs","Antidotes","Stimulants","Antipsychotics"],"ans":0,"e":"They cause sedation and anterograde amnesia, facilitating assault."},
+  {"c":"neurotic","q":"Chloral hydrate mixed with alcohol (\"Mickey Finn\") produces:","o":["Rapid deep sedation","Stimulation","Convulsions","Hypertension"],"ans":0,"e":"A classic knockout combination; chloral hydrate has a pear-like odour."},
+  {"c":"neurotic","q":"Ethanol is metabolised sequentially to:","o":["Acetaldehyde then acetate","Formic acid","Oxalic acid","Acetone"],"ans":0,"e":"Alcohol dehydrogenase then aldehyde dehydrogenase act on ethanol."},
+  {"c":"neurotic","q":"The legally significant blood-alcohol limit for driving in India is:","o":["30 mg%","80 mg%","150 mg%","300 mg%"],"ans":0,"e":"0.03 g/100 ml (30 mg%) is the statutory limit."},
+  {"c":"neurotic","q":"A roughly fatal blood-alcohol concentration in a non-tolerant adult is around:","o":["400–500 mg%","50 mg%","100 mg%","200 mg%"],"ans":0,"e":"Levels above ~400 mg% risk coma and respiratory depression."},
+  {"c":"neurotic","q":"Methanol toxicity produces blindness through the metabolite:","o":["Formic acid","Oxalic acid","Acetone","Acetate"],"ans":0,"e":"Formic acid injures the optic nerve and causes severe metabolic acidosis."},
+  {"c":"neurotic","q":"Methanol poisoning classically causes:","o":["High anion-gap acidosis with an osmolar gap","Ketosis without acidosis","Respiratory alkalosis only","Hyperkalaemia only"],"ans":0,"e":"Unmetabolised methanol raises the osmolar gap; formic acid raises the anion gap."},
+  {"c":"neurotic","q":"The shared antidote for methanol and ethylene glycol is:","o":["Fomepizole (or ethanol)","Naloxone","Atropine","Methylene blue"],"ans":0,"e":"Both inhibit alcohol dehydrogenase, preventing toxic-metabolite formation."},
+  {"c":"neurotic","q":"Ethylene glycol poisoning evolves through stages ending in:","o":["Acute kidney injury (oxalate)","Blindness","Alopecia","Cirrhosis"],"ans":0,"e":"Neurological, then cardiopulmonary, then renal (calcium-oxalate) stages."},
+  {"c":"neurotic","q":"Ethylene glycol poisoning may cause which electrolyte disturbance?","o":["Hypocalcaemia","Hyperkalaemia","Hypernatraemia","Hypermagnesaemia"],"ans":0,"e":"Oxalate binds calcium, causing hypocalcaemia and oxalate crystalluria."},
+  {"c":"neurotic","q":"Isopropyl alcohol poisoning produces:","o":["Ketosis (acetone) without significant acidosis","Severe acidosis","Optic injury","Oxalate crystals"],"ans":0,"e":"It is oxidised to acetone, giving ketosis and a fruity breath."},
+  {"c":"neurotic","q":"The \"disulfiram reaction\" with alcohol is due to accumulation of:","o":["Acetaldehyde","Formic acid","Acetone","Methanol"],"ans":0,"e":"Disulfiram blocks aldehyde dehydrogenase, causing flushing, nausea and hypotension."},
+  {"c":"neurotic","q":"Illicit \"hooch\"/spurious-liquor tragedies are usually due to contamination with:","o":["Methanol","Isopropanol","Acetone","Ether"],"ans":0,"e":"Methanol adulteration causes mass blindness and deaths."},
+  {"c":"neurotic","q":"Wernicke encephalopathy in alcoholics is prevented/treated by giving:","o":["Thiamine (before glucose)","Folate","Naloxone","Pyridoxine"],"ans":0,"e":"Thiamine must precede glucose to avoid precipitating Wernicke’s."},
+  {"c":"neurotic","q":"Delirium tremens is a life-threatening withdrawal syndrome of:","o":["Alcohol","Opioids","Cannabis","Cocaine"],"ans":0,"e":"DT features autonomic instability, tremor and hallucinations 48–96 h after cessation."},
+  {"c":"neurotic","q":"Opioids and organophosphates both classically cause:","o":["Miosis (pinpoint pupils)","Mydriasis","Nystagmus","Anisocoria"],"ans":0,"e":"Both produce pinpoint pupils, though by different mechanisms."},
+  {"c":"neurotic","q":"The management priority in opioid overdose is:","o":["Airway/ventilation plus naloxone","Immediate charcoal","Urinary acidification","Chelation"],"ans":0,"e":"Support breathing and reverse with titrated naloxone."},
+  {"c":"neurotic","q":"Fomepizole works by inhibiting:","o":["Alcohol dehydrogenase","Aldehyde dehydrogenase","Cholinesterase","Cytochrome oxidase"],"ans":0,"e":"Blocking ADH prevents conversion of methanol/ethylene glycol to toxic acids."},
+  {"c":"neurotic","q":"Which opioid may cause mydriasis rather than miosis in overdose?","o":["Pethidine (meperidine)","Morphine","Heroin","Codeine"],"ans":0,"e":"Its anticholinergic and normeperidine effects can dilate pupils and cause seizures."},
+  {"c":"neurotic","q":"Multiple-dose activated charcoal is useful for overdose of:","o":["Phenobarbital and carbamazepine","Iron","Lithium","Ethanol"],"ans":0,"e":"It interrupts enterohepatic/enteroenteric recirculation of these drugs."},
+  {"c":"neurotic","q":"Chronic alcohol withdrawal seizures typically occur:","o":["Within 6–48 hours of cessation","After 2 weeks","Only during intoxication","Never"],"ans":0,"e":"\"Rum fits\" appear early in withdrawal, before delirium tremens."},
+  {"c":"neurotic","q":"The most rapidly acting route producing intense opioid \"rush\" is:","o":["Intravenous injection","Oral","Transdermal","Rectal"],"ans":0,"e":"IV delivery gives rapid CNS penetration and overdose risk."},
+  {"c":"neurotic","q":"The anticholinergic (\"atropine\") toxidrome is remembered as:","o":["Mad, blind, dry, red and hot","Wet, small pupils, slow","Cold and clammy","Blue and breathless"],"ans":0,"e":"Delirium, mydriasis, dry skin/mouth, flushing and hyperthermia characterise it."},
+  {"c":"neurotic","q":"Datura poisoning is treated with the antidote:","o":["Physostigmine","Atropine","Naloxone","Pralidoxime"],"ans":0,"e":"Physostigmine reverses central and peripheral anticholinergic effects."},
+  {"c":"neurotic","q":"The principal alkaloids of Datura are:","o":["Atropine, hyoscine, hyoscyamine","Morphine, codeine","Cocaine, ecgonine","Strychnine, brucine"],"ans":0,"e":"These tropane alkaloids block muscarinic receptors."},
+  {"c":"neurotic","q":"\"Deadly nightshade\" (Atropa belladonna) yields:","o":["Atropine","Coniine","Nicotine","Reserpine"],"ans":0,"e":"Belladonna is a classic source of atropine (anticholinergic)."},
+  {"c":"neurotic","q":"Henbane (Hyoscyamus) is a source of:","o":["Hyoscine (scopolamine)","Strychnine","Cocaine","Digitalis"],"ans":0,"e":"Hyoscine is an anticholinergic tropane alkaloid."},
+  {"c":"neurotic","q":"Datura is often called the \"____ poison\" for its use to stupefy travellers:","o":["Road-side / railway","Arrow","Ordeal","Inheritance"],"ans":0,"e":"Datura is used to drug and rob victims (a stupefying agent)."},
+  {"c":"neurotic","q":"Cocaine acts on synapses by:","o":["Blocking dopamine and noradrenaline reuptake","Activating GABA","Blocking glycine","Inhibiting cholinesterase"],"ans":0,"e":"Reuptake blockade produces a euphoric sympathomimetic state."},
+  {"c":"neurotic","q":"Cocaine combined with alcohol forms the active, cardiotoxic metabolite:","o":["Cocaethylene","Ecgonine","Benzoylecgonine","Norcocaine"],"ans":0,"e":"Cocaethylene prolongs euphoria and increases cardiotoxicity."},
+  {"c":"neurotic","q":"The classic sympathomimetic toxidrome (cocaine/amphetamine) features:","o":["Mydriasis, hypertension, tachycardia, sweating","Miosis and bradycardia","Dry skin and flushing","Salivation and diarrhoea"],"ans":0,"e":"Adrenergic excess causes dilated pupils, hypertension and diaphoresis (skin moist)."},
+  {"c":"neurotic","q":"Amphetamine/methamphetamine overdose commonly causes:","o":["Agitation, hyperthermia and psychosis","Pinpoint pupils","Flaccid paralysis","Cherry-red skin"],"ans":0,"e":"Sympathetic overactivity with hyperthermia, seizures and paranoia."},
+  {"c":"neurotic","q":"MDMA (\"ecstasy\") is particularly associated with:","o":["Hyperthermia and hyponatraemia","Alopecia","Blue gums","Bradycardia"],"ans":0,"e":"Serotonergic effects with excess water intake cause dangerous hyponatraemia and hyperthermia."},
+  {"c":"neurotic","q":"\"Spice\"/\"K2\" refers to:","o":["Synthetic cannabinoids","Natural cannabis resin","A hallucinogenic mushroom","An opioid"],"ans":0,"e":"Potent synthetic cannabinoid-receptor agonists with unpredictable toxicity."},
+  {"c":"neurotic","q":"LSD, psilocybin and mescaline are grouped as:","o":["Hallucinogens","Opioids","Stimulants","Sedatives"],"ans":0,"e":"They distort perception, largely via serotonergic action."},
+  {"c":"neurotic","q":"Strychnine poisoning produces convulsions with:","o":["Retained consciousness between spasms","Deep coma","Flaccid paralysis","Amnesia"],"ans":0,"e":"Glycine antagonism causes stimulus-triggered spasms while the patient is awake."},
+  {"c":"neurotic","q":"The facial spasm and arched-back posture in strychnine poisoning are:","o":["Risus sardonicus and opisthotonos","Trismus only","Chvostek and Trousseau","Ptosis"],"ans":0,"e":"Sustained reflex contractions cause the \"sardonic grin\" and opisthotonos."},
+  {"c":"neurotic","q":"Strychnine convulsions are best managed by:","o":["Benzodiazepines and a dark, quiet environment","Bright light and stimulation","Atropine","Naloxone"],"ans":0,"e":"Minimising stimuli and controlling spasms (benzodiazepines) is key."},
+  {"c":"neurotic","q":"Strychnine differs from tetanus in that:","o":["There is muscle relaxation between spasms","Spasms are continuous","There is no trismus ever","Consciousness is lost"],"ans":0,"e":"Unlike tetanus, muscles relax completely between strychnine convulsions."},
+  {"c":"neurotic","q":"Curare (\"wourali\") was historically used as a/an:","o":["Arrow poison","Ordeal poison","Aphrodisiac","Purgative"],"ans":0,"e":"South American arrow poison causing peripheral neuromuscular paralysis."},
+  {"c":"neurotic","q":"Curare acts as a:","o":["Competitive (non-depolarising) NMJ blocker","Depolarising blocker","Cholinesterase inhibitor","Glycine antagonist"],"ans":0,"e":"It competes with acetylcholine at the motor end-plate; neostigmine reverses it."},
+  {"c":"neurotic","q":"Hemlock (Conium) toxin coniine causes:","o":["Ascending flaccid (peripheral) paralysis","Convulsions","Delirium","Cardiac glycoside effects"],"ans":0,"e":"Coniine blocks nicotinic receptors, producing ascending paralysis (as with Socrates)."},
+  {"c":"neurotic","q":"Serotonin syndrome (e.g., from SSRIs) is characterised by:","o":["Clonus, hyperthermia and agitation","Rigidity with normal reflexes","Flaccid paralysis","Bradycardia and miosis"],"ans":0,"e":"Neuromuscular excitability (clonus/hyperreflexia) plus autonomic and mental changes."},
+  {"c":"neurotic","q":"The specific adjunct for severe serotonin syndrome is:","o":["Cyproheptadine","Dantrolene only","Bromocriptine","Physostigmine"],"ans":0,"e":"Cyproheptadine is a serotonin antagonist used with supportive cooling."},
+  {"c":"neurotic","q":"Neuroleptic malignant syndrome (from antipsychotics) features:","o":["Lead-pipe rigidity, hyperthermia and raised CK","Clonus and hyperreflexia","Flaccid paralysis","Pinpoint pupils"],"ans":0,"e":"Dopamine blockade causes rigidity, fever, autonomic instability and rhabdomyolysis."},
+  {"c":"neurotic","q":"Treatment of neuroleptic malignant syndrome includes:","o":["Dantrolene and bromocriptine","Cyproheptadine","Naloxone","Atropine"],"ans":0,"e":"Muscle relaxation (dantrolene) and dopamine agonism (bromocriptine) plus cooling."},
+  {"c":"neurotic","q":"Tricyclic antidepressant overdose is characterised by:","o":["Wide QRS, anticholinergic signs and seizures","Pinpoint pupils","Bradycardia and salivation","Alopecia"],"ans":0,"e":"Sodium-channel blockade widens QRS; give sodium bicarbonate."},
+  {"c":"neurotic","q":"The antidote for TCA-induced wide-QRS toxicity is:","o":["Sodium bicarbonate","Calcium","Flumazenil","Naloxone"],"ans":0,"e":"Bicarbonate overcomes sodium-channel blockade, narrowing the QRS."},
+  {"c":"neurotic","q":"Lithium toxicity typically causes:","o":["Tremor, ataxia and confusion","Pinpoint pupils","Cherry-red skin","Wide QRS"],"ans":0,"e":"Neurological features predominate; severe cases need haemodialysis."},
+  {"c":"neurotic","q":"Salicylate (aspirin) poisoning classically produces:","o":["Respiratory alkalosis with metabolic acidosis and tinnitus","Pure respiratory acidosis","Ketosis without acidosis","Cyanosis"],"ans":0,"e":"Direct respiratory stimulation plus metabolic acidosis, with tinnitus and hyperthermia."},
+  {"c":"neurotic","q":"Phenytoin toxicity is recognised by:","o":["Nystagmus, ataxia and slurred speech","Pinpoint pupils","Wide QRS","Cherry-red skin"],"ans":0,"e":"Cerebellar-vestibular signs appear with rising phenytoin levels."},
+  {"c":"neurotic","q":"The active hallucinogen of \"magic mushrooms\" is:","o":["Psilocybin","Muscarine","Amatoxin","Coniine"],"ans":0,"e":"Psilocybin (converted to psilocin) is the serotonergic hallucinogen."},
+  {"c":"neurotic","q":"Cannabis intoxication classically causes:","o":["Conjunctival congestion, euphoria and tachycardia","Pinpoint pupils","Convulsions","Salivation"],"ans":0,"e":"Red eyes, altered perception, dry mouth and increased heart rate are typical."},
+  {"c":"neurotic","q":"\"Charas\", \"ganja\" and \"bhang\" are all preparations of:","o":["Cannabis","Opium","Coca","Datura"],"ans":0,"e":"Resin, flowering tops and leaf preparations of Cannabis respectively."},
+  {"c":"neurotic","q":"Which toxidrome shows dry skin, unlike the sympathomimetic one?","o":["Anticholinergic","Cholinergic","Opioid","Serotonergic"],"ans":0,"e":"Anticholinergic patients are \"dry as a bone\"; sympathomimetic patients sweat."},
+  {"c":"neurotic","q":"Cocaine’s cardiovascular danger includes:","o":["Coronary vasospasm and myocardial infarction","Bradyarrhythmia only","Heart block","No cardiac effect"],"ans":0,"e":"Vasospasm and hypertension can precipitate MI even in young users."},
+  {"c":"neurotic","q":"\"Run amok\", a sudden homicidal outburst, is classically linked to:","o":["Cannabis","Opium","Barbiturates","Alcohol only"],"ans":0,"e":"Cannabis intoxication has been historically associated with amok behaviour."},
+  {"c":"neurotic","q":"Gelsemium is classified as a:","o":["Spinal poison","Cardiac poison","Corrosive","Cyanogenic plant"],"ans":0,"e":"Like strychnine, gelsemium acts on the spinal cord (also causing weakness)."},
+  {"c":"neurotic","q":"Which finding suggests cocaine rather than opioid use?","o":["Dilated pupils and agitation","Pinpoint pupils and coma","Respiratory depression","Bradycardia"],"ans":0,"e":"Cocaine is a stimulant (mydriasis, agitation); opioids depress and constrict."},
+  {"c":"neurotic","q":"Botulinum toxin causes paralysis by:","o":["Blocking acetylcholine release at the neuromuscular junction","Antagonising glycine","Blocking dopamine reuptake","Inhibiting cholinesterase"],"ans":0,"e":"It causes a descending flaccid paralysis; treat with antitoxin and ventilation."},
+  {"c":"neurotic","q":"Muscarine-containing mushrooms cause a cholinergic crisis treated with:","o":["Atropine","Physostigmine","Naloxone","Pralidoxime"],"ans":0,"e":"Muscarinic excess (salivation, sweating, bradycardia) responds to atropine."},
+  {"c":"general","q":"The main danger of kerosene/hydrocarbon ingestion in children is:","o":["Aspiration chemical pneumonitis","Renal stones","Alopecia","Blue gums"],"ans":0,"e":"Low-viscosity hydrocarbons are readily aspirated; do NOT induce emesis."},
+  {"c":"general","q":"Paracetamol hepatotoxicity is caused by the reactive metabolite:","o":["NAPQI","Normeperidine","Formic acid","Oxalate"],"ans":0,"e":"NAPQI is normally detoxified by glutathione, which NAC replenishes."},
+  {"c":"asphyxiant","q":"Carbon monoxide binds haemoglobin with an affinity about:","o":["200–250 times that of oxygen","2 times","20 times","2000 times"],"ans":0,"e":"Its very high affinity displaces oxygen and shifts the dissociation curve left."},
+  {"c":"corrosive","q":"A disc (\"button\") battery lodged in the oesophagus is an emergency because it causes:","o":["Rapid electrolytic/liquefactive burn","Slow harmless passage","Only mild irritation","Radiation injury"],"ans":0,"e":"Local current generates hydroxide, burning through tissue within hours."},
+  {"c":"cardiac","q":"Digoxin toxicity is potentiated not only by low potassium but also by low:","o":["Magnesium","Sodium","Chloride","Phosphate"],"ans":0,"e":"Hypomagnesaemia (and hypercalcaemia) worsens digoxin toxicity."},
+  {"c":"agri","q":"An early oral sign after paraquat ingestion is:","o":["Painful ulceration of the mouth and throat","Blue gum line","Cherry-red mucosa","Alopecia"],"ans":0,"e":"Caustic mucosal injury (\"paraquat tongue\") precedes the delayed lung fibrosis."}
+];
+
+/* ---- shared image registry: each photo stored ONCE, referenced by key ---- */
+const IMAGES = {};
+
+/* ---- figure helper: imgKey (shared photo) -> imgUrl (external) -> img (inline SVG) ---- */
+function figFor(o){
+  if(o){
+    if(o.imgKey && IMAGES[o.imgKey]){return '<img src="'+IMAGES[o.imgKey]+'" alt="specimen" loading="lazy">';}
+    if(o.imgUrl){return '<img src="'+o.imgUrl+'" alt="specimen" loading="lazy">';}
+    if(o.img){return o.img;}
+  }
+  return '';
+}
+
+/* ============ STATE ============ */
+let mode='cards';
+let activeCat='all';
+let deck=[], idx=0, flipped=false;
+let quizPool=[], qi=0, score=0, answered=0, locked=false;
+
+document.getElementById('fc-total').textContent=CARDS.length;
+document.getElementById('q-total').textContent=QUIZ.length;
+
+/* ---- filters ---- */
+function buildFilters(){
+  const box=document.getElementById('filters');
+  let html=`<button class="chip on" data-cat="all" onclick="setCat('all')">
+     <span class="sw" style="background:#e9e6df"></span>All</button>`;
+  for(const k in CATS){
+    html+=`<button class="chip" data-cat="${k}" onclick="setCat('${k}')">
+      <span class="sw" style="background:${CATS[k].color}"></span>${CATS[k].label}</button>`;
+  }
+  html+=`<span class="count" id="cat-count"></span>`;
+  box.innerHTML=html;
+}
+function setCat(c){
+  activeCat=c;
+  document.querySelectorAll('.chip').forEach(ch=>ch.classList.toggle('on',ch.dataset.cat===c));
+  if(mode==='cards'){buildDeck();renderCard();}
+  else{buildQuiz();renderQuestion();}
+}
+
+/* ---- mode ---- */
+function setMode(m){
+  mode=m;
+  document.getElementById('m-cards').classList.toggle('active',m==='cards');
+  document.getElementById('m-quiz').classList.toggle('active',m==='quiz');
+  document.getElementById('view-cards').classList.toggle('hidden',m!=='cards');
+  document.getElementById('view-quiz').classList.toggle('hidden',m!=='quiz');
+  if(m==='cards'){buildDeck();renderCard();}
+  else{buildQuiz();renderQuestion();}
+}
+
+/* ============ FLASHCARDS ============ */
+function buildDeck(){
+  deck=activeCat==='all'?CARDS.slice():CARDS.filter(c=>c.c===activeCat);
+  idx=0;flipped=false;
+  document.getElementById('cat-count').textContent=deck.length+' cards';
+}
+function renderCard(){
+  const card=document.getElementById('card');
+  card.classList.remove('flipped');flipped=false;
+  if(!deck.length)return;
+  const d=deck[idx];
+  const col=CATS[d.c].color, lab=CATS[d.c].label.toUpperCase();
+  const code='TOX-'+String(CARDS.indexOf(d)+1).padStart(3,'0');
+  document.getElementById('fc-stripe').style.background=col;
+  document.getElementById('fc-stripe2').style.background=col;
+  document.getElementById('fc-code').textContent=code;
+  document.getElementById('fc-code2').textContent=code;
+  const cl=document.getElementById('fc-catlabel');cl.textContent=lab;cl.style.background=col;
+  const cl2=document.getElementById('fc-catlabel2');cl2.textContent=lab;cl2.style.background=col;
+  const ffig=document.getElementById('fc-figure');const fd=figFor(d);
+  if(fd){ffig.innerHTML=fd;ffig.classList.add('show');}else{ffig.innerHTML='';ffig.classList.remove('show');}
+  document.getElementById('fc-q').textContent=d.q;
+  document.getElementById('fc-a').innerHTML=d.a;
+  document.getElementById('fc-progress').textContent=(idx+1)+' / '+deck.length;
+  document.getElementById('fc-bar').style.width=((idx+1)/deck.length*100)+'%';
+  document.getElementById('fc-prev').disabled=idx===0;
+  document.getElementById('fc-next').disabled=idx===deck.length-1;
+}
+function flip(){flipped=!flipped;document.getElementById('card').classList.toggle('flipped',flipped);}
+function nextCard(){if(idx<deck.length-1){idx++;renderCard();}}
+function prevCard(){if(idx>0){idx--;renderCard();}}
+function shuffleCards(){
+  for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+  idx=0;renderCard();
+}
+
+/* ============ QUIZ ============ */
+function buildQuiz(){
+  quizPool=activeCat==='all'?QUIZ.slice():QUIZ.filter(q=>q.c===activeCat);
+  for(let i=quizPool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[quizPool[i],quizPool[j]]=[quizPool[j],quizPool[i]];}
+  qi=0;score=0;answered=0;locked=false;
+  document.getElementById('quiz-result').classList.add('hidden');
+  document.getElementById('quiz-live').classList.remove('hidden');
+  document.getElementById('cat-count').textContent=quizPool.length+' questions';
+}
+function renderQuestion(){
+  if(!quizPool.length){return;}
+  locked=false;
+  const q=quizPool[qi];
+  const col=CATS[q.c].color;
+  document.getElementById('q-index').textContent='Q '+(qi+1)+' / '+quizPool.length;
+  const qc=document.getElementById('q-cat');qc.textContent=CATS[q.c].label.toUpperCase();qc.style.background=col;
+  const fig=document.getElementById('q-figure');const fq=figFor(q);
+  if(fq){fig.innerHTML=fq;fig.classList.add('show');}else{fig.innerHTML='';fig.classList.remove('show');}
+  document.getElementById('q-text').textContent=q.q;
+  const box=document.getElementById('q-opts');box.innerHTML='';
+  q.o.forEach((opt,i)=>{
+    const b=document.createElement('button');
+    b.className='opt';
+    b.innerHTML=`<span class="letter">${String.fromCharCode(65+i)}</span><span>${opt}</span>`;
+    b.onclick=()=>chooseOpt(i);
+    box.appendChild(b);
+  });
+  const ex=document.getElementById('q-explain');ex.classList.remove('show');
+  document.getElementById('q-score').textContent=score;
+  document.getElementById('q-answered').textContent=answered;
+  document.getElementById('q-next').disabled=true;
+  document.getElementById('q-next').textContent=(qi===quizPool.length-1)?'See result →':'Next →';
+  document.getElementById('q-bar').style.width=(qi/quizPool.length*100)+'%';
+}
+function chooseOpt(i){
+  if(locked)return;locked=true;
+  const q=quizPool[qi];
+  const btns=document.querySelectorAll('#q-opts .opt');
+  btns.forEach((b,j)=>{
+    b.disabled=true;
+    if(j===q.ans)b.classList.add('correct');
+    if(j===i&&i!==q.ans)b.classList.add('wrong');
+  });
+  answered++;
+  if(i===q.ans)score++;
+  document.getElementById('q-score').textContent=score;
+  document.getElementById('q-answered').textContent=answered;
+  const ex=document.getElementById('q-explain');
+  document.getElementById('q-explain-txt').textContent=q.e;
+  ex.classList.add('show');
+  document.getElementById('q-next').disabled=false;
+}
+function nextQuestion(){
+  if(qi<quizPool.length-1){qi++;renderQuestion();}
+  else{showResult();}
+}
+function showResult(){
+  document.getElementById('quiz-live').classList.add('hidden');
+  const r=document.getElementById('quiz-result');r.classList.remove('hidden');
+  const pct=Math.round(score/quizPool.length*100);
+  document.getElementById('r-pct').textContent=pct+'%';
+  document.getElementById('r-detail').textContent=score+' correct out of '+quizPool.length;
+  let v;
+  if(pct>=85)v='Distinction — exam ready.';
+  else if(pct>=70)v='Solid grasp — polish the weak classes.';
+  else if(pct>=50)v='Passing — revise antidotes & hallmark signs.';
+  else v='Needs work — run the flashcards again.';
+  document.getElementById('r-verdict').textContent=v;
+}
+function restartQuiz(){buildQuiz();renderQuestion();}
+
+/* ============ KEYBOARD ============ */
+document.addEventListener('keydown',e=>{
+  if(e.key==='1'){setMode('cards');}
+  else if(e.key==='2'){setMode('quiz');}
+  if(mode==='cards'){
+    if(e.key==='ArrowRight')nextCard();
+    else if(e.key==='ArrowLeft')prevCard();
+    else if(e.key===' '){e.preventDefault();flip();}
+  }
+});
+
+/* ============ INIT ============ */
+buildFilters();
+buildDeck();
+renderCard();
+</script>
+  <div class="watermark" aria-hidden="true"></div>
+
+  <section class="license">
+    <span class="cc-badge">CC BY-NC 4.0</span>
+    <div class="ltext">
+      <strong>Forensic Toxicology — Flashcards &amp; Quiz</strong> &copy; 2026 <strong>Dr Harvinder Singh Chhabra</strong>, Assistant Professor, Department of Forensic Medicine, Himalayan Institute of Medical Sciences (HIMS), Swami Rama Himalayan University (SRHU), Dehradun.<br>
+      Released under the <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">Creative Commons Attribution&ndash;NonCommercial 4.0 International</a> licence &mdash; free to use, share and adapt for teaching and other non-commercial purposes with attribution to the author; commercial use requires permission. When adapting, retain this notice.<br>
+      <span class="disclaimer">For educational use only &mdash; a teaching aid for medical and forensic students. It is not a substitute for standard textbooks, clinical judgement, or current statutory and forensic guidelines, and is provided as-is without warranty. All specimen illustrations are the author&rsquo;s own original diagrams; no third-party images are included.</span>
+    </div>
+  </section>
+</body>
+</html>
